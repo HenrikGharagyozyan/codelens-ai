@@ -1,0 +1,20 @@
+[project]
+name = "codelens"
+version = "0.1.0"
+description = "AI-powered developer tool for codebase analysis"
+readme = "README.md"
+authors = [
+    { name = "HenrikGharagyozyan1", email = "henrik.gharagyozyan1@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=15.0.0",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+codelens = "codelens.cli:app" 
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"

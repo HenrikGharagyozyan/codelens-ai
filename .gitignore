@@ -1,0 +1,13 @@
+# Кэш байткода Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# Локальные настройки IDE
+.idea/
+.vscode/
