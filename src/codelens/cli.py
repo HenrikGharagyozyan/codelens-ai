@@ -103,7 +103,11 @@ def search(query: str = typer.Argument(..., help="Symbol name to search for")):
     console.print(f"[bold green]Found {len(results)} symbols matching:[/bold green] '{query}'\n")
     
     for row in results:
+<<<<<<< HEAD
         # Since we configured sqlite3.Row, we can access columns by names
+=======
+        # Поскольку мы настроили sqlite3.Row, мы можем обращаться к колонкам по именам
+>>>>>>> 1fc77528d69b0a8f4b9c10995a2503ec8666dd28
         sym_type = row['type'].upper()
         color = "blue" if sym_type == "CLASS" else "magenta"
         
