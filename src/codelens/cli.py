@@ -1,9 +1,11 @@
 import typer
 from rich.console import Console
 from pathlib import Path
+from rich.progress import track
 
 from codelens.repository.scanner import RepositoryScanner
 from codelens.parser.python_parser import parse_python_file
+from codelens.repository.db import DatabaseManager
 
 
 # Create the main CLI application
@@ -24,16 +26,42 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
 
     scanner = RepositoryScanner(path)
     repo = scanner.scan()
+    db = DatabaseManager()
 
-    console.print(f"[green]Successfully scanned:[/green] {repo.root}")
-    console.print(f"[green]Found text files:[/green] {len(repo.files)}")
+    symbols_count = 0
 
-    # Print the first 3 files as a sanity check
-    if repo.files:
-        console.print("\n[yellow]Sample files found:[/yellow]")
-        for f in repo.files[:3]:
-            console.print(f"  - {f.path} ({f.lines} lines, {f.size} bytes)")
+    # track() automaticly draw progress bar in terminal
+    for f in track(repo.files, description="Indexing files..."):
+        # Save file metadata
+        db.insert_file(str(f.path), f.language, f.size, f.lines)
 
+        # If the file is Python - build AST and extract symbols
+        if f.language == "py":
+            full_path = repo.root / f.path
+            classes, functions = parse_python_file(full_path)
+
+            # Save classes and their methods
+            for cls in classes:
+                sym_id = f"{f.path}::{cls.name}"
+                db.insert_symbol(sym_id, cls.name, "class", str(f.path), cls.line_number)
+                symbols_count += 1
+
+                for method in cls.methods:
+                    meth_id = f"{f.path}::{cls.name}.{method.name}"
+                    db.insert_symbol(meth_id, method.name, "method", str(f.path), method.line_number)
+                    symbols_count += 1
+
+            # Save global functions
+            for func in functions:
+                sym_id = f"{f.path}::{func.name}"
+                db.insert_symbol(sym_id, func.name, "function", str(f.path), func.line_number)
+                symbols_count += 1
+
+    console.print("\n[bold green]Index complete![/bold green]")
+    console.print(f"Files indexed: {len(repo.files)}")
+    console.print(f"Symbols extracted: {symbols_count}")
+    console.print(f"Database saved to: {db.db_path.absolute()}")
+            
 
 @app.command()
 def inspect(file: str = typer.Argument(..., help="Path to a Python file to inspect")):
