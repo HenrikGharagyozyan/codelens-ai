@@ -48,5 +48,14 @@ class DatabaseManager:
                 (symbol_id, name, sym_type, file_path, line_number)
             )
 
+    def search_symbols(self, query: str) -> list[sqlite3.Row]:
+        """Ищет символы по частичному совпадению имени."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT * FROM symbols WHERE name LIKE ? LIMIT 15",
+                (f"%{query}%",)  # % означает любой текст до и после запроса
+            )
+            return cursor.fetchall()
+
     def close(self):
         self.conn.close()
