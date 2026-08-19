@@ -91,6 +91,27 @@ def inspect(file: str = typer.Argument(..., help="Path to a Python file to inspe
 
 
 @app.command()
+def search(query: str = typer.Argument(..., help="Symbol name to search for")):
+    """Search for a symbol in the indexed database."""
+    db = DatabaseManager()
+    results = db.search_symbols(query)
+    
+    if not results:
+        console.print(f"[yellow]No symbols found matching:[/yellow] '{query}'")
+        return
+        
+    console.print(f"[bold green]Found {len(results)} symbols matching:[/bold green] '{query}'\n")
+    
+    for row in results:
+        # Поскольку мы настроили sqlite3.Row, мы можем обращаться к колонкам по именам
+        sym_type = row['type'].upper()
+        color = "blue" if sym_type == "CLASS" else "magenta"
+        
+        console.print(f"[{color}]{sym_type}[/{color}] {row['name']}")
+        console.print(f"  └── [dim]{row['id']} (line {row['line_number']})[/dim]")
+
+
+@app.command()
 def ask(question: str):
     """Ask the LLM a question about the indexed codebase."""
     console.print(f"[yellow]Asking LLM:[/yellow] {question}")
