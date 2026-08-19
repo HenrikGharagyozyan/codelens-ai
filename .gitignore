@@ -11,3 +11,5 @@ env/
 # Local IDE settings
 .idea/
 .vscode/
+
+*.db
