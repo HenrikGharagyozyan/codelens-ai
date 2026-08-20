@@ -31,6 +31,13 @@ class DatabaseManager:
                     line_number INTEGER,
                     FOREIGN KEY (file_path) REFERENCES files(path)
                 );
+
+                CREATE TABLE IF NOT EXISTS calls (
+                    caller_id TEXT,
+                    callee_name TEXT,
+                    line_number INTEGER,
+                    FOREIGN KEY (caller_id) REFERENCES symbols(id)
+                );
             """)
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
@@ -48,6 +55,13 @@ class DatabaseManager:
                 (symbol_id, name, sym_type, file_path, line_number)
             )
 
+    def insert_call(self, caller_id: str, callee_name: str, line_number: int):
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)",
+                (caller_id, callee_name, line_number)
+            )
+
     def search_symbols(self, query: str) -> list[sqlite3.Row]:
         """Searches for symbols by partial name match."""
         with self.conn:
@@ -57,5 +71,14 @@ class DatabaseManager:
             )
             return cursor.fetchall()
 
+    def get_outgoing_calls(self, symbol_id: str) -> list[sqlite3.Row]:
+        """Returns a list of all functions called by the specified symbol."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT callee_name, line_number FROM calls WHERE caller_id = ?",
+                (symbol_id,)
+            )
+            return cursor.fetchall()
+    
     def close(self):
         self.conn.close()
