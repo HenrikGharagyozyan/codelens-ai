@@ -51,11 +51,19 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
                     db.insert_symbol(meth_id, method.name, "method", str(f.path), method.line_number)
                     symbols_count += 1
 
+                    # Save calls inside the method
+                    for call_name in method.calls:
+                        db.insert_call(meth_id, call_name, method.line_number)
+
             # Save global functions
             for func in functions:
                 sym_id = f"{f.path}::{func.name}"
                 db.insert_symbol(sym_id, func.name, "function", str(f.path), func.line_number)
                 symbols_count += 1
+
+                # Save calls inside the global function
+                for call_name in func.calls:
+                    db.insert_call(sym_id, call_name, func.line_number)
 
     console.print("\n[bold green]Index complete![/bold green]")
     console.print(f"Files indexed: {len(repo.files)}")
@@ -103,11 +111,7 @@ def search(query: str = typer.Argument(..., help="Symbol name to search for")):
     console.print(f"[bold green]Found {len(results)} symbols matching:[/bold green] '{query}'\n")
     
     for row in results:
-<<<<<<< HEAD
         # Since we configured sqlite3.Row, we can access columns by names
-=======
-        # Поскольку мы настроили sqlite3.Row, мы можем обращаться к колонкам по именам
->>>>>>> 1fc77528d69b0a8f4b9c10995a2503ec8666dd28
         sym_type = row['type'].upper()
         color = "blue" if sym_type == "CLASS" else "magenta"
         
@@ -122,9 +126,43 @@ def ask(question: str):
 
 
 @app.command()
-def graph(symbol: str):
+def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for")):
     """Show the dependency graph for a specific symbol."""
-    console.print(f"[magenta]Building graph for:[/magenta] {symbol}")
+    db = DatabaseManager()
+
+    # Find the symbol itself
+    results = db.search_symbols(symbol)
+    if not results:
+        console.print(f"[red]Symbol '{symbol}' not found in index.[/red]")
+        return
+
+    # Find an exact name match
+    target = None
+    for row in results:
+        if row['name'] == symbol:
+            target = row
+            break
+
+    # If there is no exact match, use the first result
+    if not target:
+        target = results[0]
+        
+    sym_id = target['id']
+
+    console.print(f"[bold magenta]Dependency Graph for:[/bold magenta] {target['name']} ({sym_id})\n")
+
+    # Get all calls made by this function
+    calls = db.get_outgoing_calls(sym_id)
+
+    if not calls:
+        console.print("[dim]This symbol doesn't call any other known functions.[/dim]")
+        return
+
+    console.print("This symbol calls:")
+    # Use set to remove duplicates (if a function is called multiple times)
+    unique_calls = set(row['callee_name'] for row in calls)
+    for call in unique_calls:
+        console.print(f"  ├── [cyan]{call}()[/cyan]")
 
 
 
