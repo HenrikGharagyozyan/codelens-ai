@@ -56,7 +56,7 @@ class SemanticChunker:
                     sym_type = "symbol"
                     
                 chunk = Chunk(
-                    chunk_id=f"{sym.file_path}::{sym.name}",
+                    chunk_id=f"{sym.file_path}::{sym.name}:{sym.line_number}",
                     file_path=sym.file_path,
                     symbol_name=sym.name,
                     start_line=sym.line_number,
