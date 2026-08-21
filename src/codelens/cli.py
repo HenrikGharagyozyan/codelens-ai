@@ -1,11 +1,13 @@
 import typer
 from rich.console import Console
-from pathlib import Path
 from rich.progress import track
+from rich.markdown import Markdown
+from pathlib import Path
 
 from codelens.repository.scanner import RepositoryScanner
 from codelens.parser.python_parser import parse_python_file
 from codelens.repository.db import DatabaseManager
+from codelens.llm.gemini import GeminiClient
 
 
 # Create the main CLI application
@@ -163,6 +165,57 @@ def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for
     unique_calls = set(row['callee_name'] for row in calls)
     for call in unique_calls:
         console.print(f"  ├── [cyan]{call}()[/cyan]")
+
+
+@app.command()
+def ask(question: str = typer.Argument(..., help="Ask a question about the codebase")):
+    """Ask the LLM a question about the indexed codebase."""
+    console.print(f"[yellow]Analyzing codebase for question:[/yellow] {question}\n")
+    
+    db = DatabaseManager()
+    
+    # Extract the symbol table from the database
+    with db.conn:
+        files = db.conn.execute("SELECT path FROM files").fetchall()
+        symbols = db.conn.execute("SELECT name, type, file_path, line_number FROM symbols").fetchall()
+        
+    if not files:
+        console.print("[red]Database is empty. Please run 'uv run codelens index .' first.[/red]")
+        return
+
+    # Build a text "map" of the project for the neural network
+    context_lines = ["Repository Structure:"]
+    
+    # Group symbols by file for convenience
+    symbols_by_file = {}
+    for sym in symbols:
+        filepath = sym['file_path']
+        if filepath not in symbols_by_file:
+            symbols_by_file[filepath] = []
+        symbols_by_file[filepath].append(sym)
+        
+    for file_row in files:
+        filepath = file_row['path']
+        context_lines.append(f"\nFile: {filepath}")
+        if filepath in symbols_by_file:
+            for sym in symbols_by_file[filepath]:
+                context_lines.append(f"  - {sym['type'].capitalize()}: {sym['name']} (line {sym['line_number']})")
+
+    code_context = "\n".join(context_lines)
+    
+    # Send the request to Gemini
+    try:
+        client = GeminiClient()
+
+        with console.status("[bold cyan]Thinking...", spinner="dots"):
+            answer = client.ask(code_context, question)
+        
+        # Display the response (Markdown automatically formats code and lists)
+        console.print("\n[bold green]CodeLens AI:[/bold green]")
+        console.print(Markdown(answer))
+        
+    except Exception as e:
+        console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
 
 
 

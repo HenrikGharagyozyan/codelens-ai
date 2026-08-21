@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "google-genai>=2.19.0",
     "pathspec>=1.1.1",
+    "python-dotenv>=1.2.3",
     "rich>=15.0.0",
     "typer>=0.27.1",
 ]
