@@ -38,6 +38,16 @@ class DatabaseManager:
                     line_number INTEGER,
                     FOREIGN KEY (caller_id) REFERENCES symbols(id)
                 );
+
+                CREATE TABLE IF NOT EXISTS chunks (
+                    chunk_id TEXT PRIMARY KEY,
+                    file_path TEXT,
+                    symbol_name TEXT,
+                    symbol_type TEXT,
+                    start_line INTEGER,
+                    end_line INTEGER,
+                    content TEXT
+                );
             """)
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
@@ -79,6 +89,18 @@ class DatabaseManager:
                 (symbol_id,)
             )
             return cursor.fetchall()
+
+    def save_chunks(self, chunks: list) -> None:
+        """Saves semantic code chunks to the database."""
+        with self.conn:
+            self.conn.execute("DELETE FROM chunks")  # Очищаем старые чанки при переиндексации
+            self.conn.executemany("""
+                INSERT INTO chunks (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, [
+                (c.chunk_id, c.file_path, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.content)
+                for c in chunks
+            ])
     
     def close(self):
         self.conn.close()
