@@ -20,7 +20,8 @@ class PythonAstVisitor(ast.NodeVisitor):
             name=node.name,
             file_path=self.file_path,
             line_number=node.lineno,
-            bases=bases
+            bases=bases,
+            end_line_number=getattr(node, 'end_lineno', node.lineno)
         )
         self.classes.append(cls_symbol)
         
@@ -41,7 +42,8 @@ class PythonAstVisitor(ast.NodeVisitor):
             file_path=self.file_path,
             line_number=node.lineno,
             args=args,
-            is_async=isinstance(node, ast.AsyncFunctionDef)
+            is_async=isinstance(node, ast.AsyncFunctionDef),
+            end_line_number=getattr(node, 'end_lineno', node.lineno)
         )
         
         # If we are currently inside a class, add the function to methods, otherwise to global functions
