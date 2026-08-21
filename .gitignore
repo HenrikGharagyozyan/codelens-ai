@@ -13,3 +13,4 @@ env/
 .vscode/
 
 *.db
+.env
