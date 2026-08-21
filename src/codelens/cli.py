@@ -8,6 +8,7 @@ from codelens.repository.scanner import RepositoryScanner
 from codelens.parser.python_parser import parse_python_file
 from codelens.repository.db import DatabaseManager
 from codelens.llm.gemini import GeminiClient
+from codelens.indexer.chunker import SemanticChunker
 
 
 # Create the main CLI application
@@ -31,6 +32,7 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
     db = DatabaseManager()
 
     symbols_count = 0
+    all_symbols = []  # Collect all symbols for chunker
 
     # track() automaticly draw progress bar in terminal
     for f in track(repo.files, description="Indexing files..."):
@@ -41,6 +43,11 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
         if f.language == "py":
             full_path = repo.root / f.path
             classes, functions = parse_python_file(full_path)
+
+            all_symbols.extend(classes)
+            for cls in classes:
+                all_symbols.extend(cls.methods)
+            all_symbols.extend(functions)
 
             # Save classes and their methods
             for cls in classes:
@@ -66,6 +73,11 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
                 # Save calls inside the global function
                 for call_name in func.calls:
                     db.insert_call(sym_id, call_name, func.line_number)
+
+    with console.status("[bold green]Chunking codebase...", spinner="dots"):
+        chunker = SemanticChunker(path)
+        chunks = chunker.create_chunks(all_symbols)
+        db.save_chunks(chunks)
 
     console.print("\n[bold green]Index complete![/bold green]")
     console.print(f"Files indexed: {len(repo.files)}")
@@ -217,6 +229,21 @@ def ask(question: str = typer.Argument(..., help="Ask a question about the codeb
     except Exception as e:
         console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
 
+
+@app.command(name="inspect-chunks")
+def inspect_chunks(limit: int = 3):
+    """View extracted semantic chunks from the database."""
+    db = DatabaseManager()
+    chunks = db.conn.execute("SELECT chunk_id, start_line, end_line, content FROM chunks LIMIT ?", (limit,)).fetchall()
+    
+    if not chunks:
+        console.print("[red]No chunks found. Run 'uv run codelens index .' first.[/red]")
+        return
+        
+    for row in chunks:
+        console.print(f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} (Lines: {row['start_line']}-{row['end_line']})")
+        console.print(f"```python\n{row['content']}\n```\n")
+        console.print("-" * 50)
 
 
 if __name__ == "__main__":

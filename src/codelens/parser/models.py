@@ -6,7 +6,7 @@ class Symbol:
     name: str
     file_path: str
     line_number: int
-
+    end_line_number: int | None = None  # For chunking
 
 @dataclass
 class Function(Symbol):
