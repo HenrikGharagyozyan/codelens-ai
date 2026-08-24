@@ -93,7 +93,7 @@ class DatabaseManager:
     def save_chunks(self, chunks: list) -> None:
         """Saves semantic code chunks to the database."""
         with self.conn:
-            self.conn.execute("DELETE FROM chunks")  # Очищаем старые чанки при переиндексации
+            self.conn.execute("DELETE FROM chunks")  # Clear stale chunks during reindexing
             self.conn.executemany("""
                 INSERT INTO chunks (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
                 VALUES (?, ?, ?, ?, ?, ?, ?)

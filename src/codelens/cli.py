@@ -9,6 +9,7 @@ from codelens.parser.python_parser import parse_python_file
 from codelens.repository.db import DatabaseManager
 from codelens.llm.gemini import GeminiClient
 from codelens.indexer.chunker import SemanticChunker
+from codelens.indexer.vector_store import VectorStore
 
 
 # Create the main CLI application
@@ -79,6 +80,9 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
         chunks = chunker.create_chunks(all_symbols)
         db.save_chunks(chunks)
 
+        vector_store = VectorStore()
+        vector_store.add_chunks(chunks)
+
     console.print("\n[bold green]Index complete![/bold green]")
     console.print(f"Files indexed: {len(repo.files)}")
     console.print(f"Symbols extracted: {symbols_count}")
@@ -134,9 +138,29 @@ def search(query: str = typer.Argument(..., help="Symbol name to search for")):
 
 
 @app.command()
-def ask(question: str):
-    """Ask the LLM a question about the indexed codebase."""
-    console.print(f"[yellow]Asking LLM:[/yellow] {question}")
+def ask(question: str = typer.Argument(..., help="Ask a question about the codebase")):
+    """Ask the LLM a question about the indexed codebase using RAG."""
+    vector_store = VectorStore()
+
+    with console.status("[bold cyan]Searching codebase context...", spinner="dots"):
+        # Retrieve the 5 code chunks most similar in meaning
+        results = vector_store.search(question, limit=5)
+
+    if not results:
+        console.print("[yellow]No relevant context found in the codebase.[/yellow]")
+        return
+
+    with console.status("[bold magenta]Analyzing code with Gemini...", spinner="dots"):
+        try:
+            client = GeminiClient()
+            # Pass the list of vector results directly to the client
+            answer = client.ask(results, question)
+        except Exception as e:
+            console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
+            return
+
+    console.print(f"\n[bold green]Question:[/bold green] {question}\n")
+    console.print(Markdown(answer))
 
 
 @app.command()
@@ -179,57 +203,6 @@ def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for
         console.print(f"  ├── [cyan]{call}()[/cyan]")
 
 
-@app.command()
-def ask(question: str = typer.Argument(..., help="Ask a question about the codebase")):
-    """Ask the LLM a question about the indexed codebase."""
-    console.print(f"[yellow]Analyzing codebase for question:[/yellow] {question}\n")
-    
-    db = DatabaseManager()
-    
-    # Extract the symbol table from the database
-    with db.conn:
-        files = db.conn.execute("SELECT path FROM files").fetchall()
-        symbols = db.conn.execute("SELECT name, type, file_path, line_number FROM symbols").fetchall()
-        
-    if not files:
-        console.print("[red]Database is empty. Please run 'uv run codelens index .' first.[/red]")
-        return
-
-    # Build a text "map" of the project for the neural network
-    context_lines = ["Repository Structure:"]
-    
-    # Group symbols by file for convenience
-    symbols_by_file = {}
-    for sym in symbols:
-        filepath = sym['file_path']
-        if filepath not in symbols_by_file:
-            symbols_by_file[filepath] = []
-        symbols_by_file[filepath].append(sym)
-        
-    for file_row in files:
-        filepath = file_row['path']
-        context_lines.append(f"\nFile: {filepath}")
-        if filepath in symbols_by_file:
-            for sym in symbols_by_file[filepath]:
-                context_lines.append(f"  - {sym['type'].capitalize()}: {sym['name']} (line {sym['line_number']})")
-
-    code_context = "\n".join(context_lines)
-    
-    # Send the request to Gemini
-    try:
-        client = GeminiClient()
-
-        with console.status("[bold cyan]Thinking...", spinner="dots"):
-            answer = client.ask(code_context, question)
-        
-        # Display the response (Markdown automatically formats code and lists)
-        console.print("\n[bold green]CodeLens AI:[/bold green]")
-        console.print(Markdown(answer))
-        
-    except Exception as e:
-        console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
-
-
 @app.command(name="inspect-chunks")
 def inspect_chunks(limit: int = 3):
     """View extracted semantic chunks from the database."""
@@ -244,6 +217,29 @@ def inspect_chunks(limit: int = 3):
         console.print(f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} (Lines: {row['start_line']}-{row['end_line']})")
         console.print(f"```python\n{row['content']}\n```\n")
         console.print("-" * 50)
+
+
+@app.command(name="search-semantic")
+def search_semantic(query: str = typer.Argument(..., help="Query to search by meaning")):
+    """Search the codebase by semantic meaning using Embeddings."""
+    vector_store = VectorStore()
+    
+    with console.status("[bold cyan]Searching vector database...", spinner="dots"):
+        results = vector_store.search(query, limit=3)
+        
+    if not results:
+        console.print("[yellow]No relevant code found.[/yellow]")
+        return
+        
+    console.print(f"[bold green]Top semantic matches for:[/bold green] '{query}'\n")
+    
+    for idx, res in enumerate(results, 1):
+        meta = res['metadata']
+        console.print(f"{idx}. [bold cyan]{meta['symbol_name']}[/bold cyan] in [dim]{meta['file_path']}[/dim] (Score: {res['distance']:.4f})")
+        # Print the first 3 lines of code for a preview
+        preview_lines = res['document'].split('\n')[:3]
+        preview = '\n'.join(preview_lines) + ('\n...' if len(preview_lines) >= 3 else '')
+        console.print(f"```python\n{preview}\n```\n")
 
 
 if __name__ == "__main__":
