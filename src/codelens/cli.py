@@ -2,6 +2,7 @@ import typer
 from rich.console import Console
 from rich.progress import track
 from rich.markdown import Markdown
+from rich.prompt import Prompt
 from pathlib import Path
 
 from codelens.repository.scanner import RepositoryScanner
@@ -164,6 +165,57 @@ def ask(question: str = typer.Argument(..., help="Ask a question about the codeb
 
     console.print(f"\n[bold green]Question:[/bold green] {question}\n")
     console.print(Markdown(answer))
+
+
+@app.command()
+def chat():
+    """Start an interactive chat session about the codebase with history."""
+    db = DatabaseManager()
+    vector_store = VectorStore()
+    retriever = ContextRetriever(db, vector_store)
+
+    try:
+        client = GeminiClient()
+        chat_session = client.start_chat()
+    except Exception as e:
+        console.print(f"[bold red]Error initializing Gemini client:[/bold red] {e}")
+        return
+
+    console.print("[bold green]🤖 Welcome to CodeLens Interactive Chat![/bold green]")
+    console.print("[dim]Ask questions about the codebase. Type 'exit' or 'quit' to end the session.\n[/dim]")
+
+    while True:
+        try:
+            question = Prompt.ask("[bold blue]You[/bold blue]")
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Goodbye![/dim]")
+            break
+
+        if not question.strip():
+            continue
+
+        if question.strip().lower() in ["exit", "quit"]:
+            console.print("[dim]Goodbye![/dim]")
+            break
+
+        with console.status("[bold cyan]Searching codebase and building context...", spinner="dots"):
+            context = retriever.build_context(question, limit=3)
+
+        if context:
+            full_prompt = f"{context}\n\nUSER QUESTION:\n{question}"
+        else:
+            full_prompt = question
+
+        with console.status("[bold magenta]CodeLens thinking...", spinner="dots"):
+            try:
+                answer = client.send_chat_message(chat_session, full_prompt)
+            except Exception as e:
+                console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
+                continue
+
+        console.print("\n[bold green]CodeLens:[/bold green]\n")
+        console.print(Markdown(answer))
+        console.print()
 
 
 @app.command()
