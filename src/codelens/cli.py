@@ -10,6 +10,7 @@ from codelens.repository.db import DatabaseManager
 from codelens.llm.gemini import GeminiClient
 from codelens.indexer.chunker import SemanticChunker
 from codelens.indexer.vector_store import VectorStore
+from codelens.context.retriever import ContextRetriever
 
 
 # Create the main CLI application
@@ -139,22 +140,24 @@ def search(query: str = typer.Argument(..., help="Symbol name to search for")):
 
 @app.command()
 def ask(question: str = typer.Argument(..., help="Ask a question about the codebase")):
-    """Ask the LLM a question about the indexed codebase using RAG."""
+    """Ask the LLM a question about the indexed codebase using RAG with Call Graph."""
+    db = DatabaseManager()
     vector_store = VectorStore()
+    retriever = ContextRetriever(db, vector_store)
 
-    with console.status("[bold cyan]Searching codebase context...", spinner="dots"):
-        # Retrieve the 5 code chunks most similar in meaning
-        results = vector_store.search(question, limit=5)
+    with console.status("[bold cyan]Searching codebase and building graph context...", spinner="dots"):
+        # The retriever now searches vectors and loads relationships from SQLite itself
+        context = retriever.build_context(question, limit=5)
 
-    if not results:
+    if not context:
         console.print("[yellow]No relevant context found in the codebase.[/yellow]")
         return
 
     with console.status("[bold magenta]Analyzing code with Gemini...", spinner="dots"):
         try:
             client = GeminiClient()
-            # Pass the list of vector results directly to the client
-            answer = client.ask(results, question)
+            # Pass the assembled text context with the call graph
+            answer = client.ask(context, question)
         except Exception as e:
             console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
             return
