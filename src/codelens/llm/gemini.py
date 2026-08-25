@@ -17,20 +17,13 @@ class GeminiClient:
     def ask(self, context_chunks: str, question: str) -> str:
         """Builds the system prompt and sends a request to the AI."""
 
-        # Build a clean context string from the matching code chunks
-        context_str = ""
-        for chunk in context_chunks:
-            meta = chunk["metadata"]
-            context_str += f"--- File: {meta['file_path']} | Symbol: {meta['symbol_name']} ---\n"
-            context_str += f"{chunk['document']}\n\n"
-        
         prompt = f"""
         You are CodeLens, an expert AI assistant designed to help software engineers navigate and understand their local codebase.
         
         Below is some relevant context extracted from the user's repository via AST parsing and dependency tracking:
         
         --- CODE CONTEXT START ---
-        {context_str}
+        {context_chunks}
         --- CODE CONTEXT END ---
         
         Based ONLY on the provided context, answer the following question. 
