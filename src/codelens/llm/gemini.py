@@ -12,6 +12,7 @@ class GeminiClient:
             raise ValueError("GEMINI_API_KEY is missing in .env file. Please create one.")
         
         self.client = genai.Client(api_key=api_key)
+        self.model_name = 'gemini-3.6-flash'
 
 
     def ask(self, context_chunks: str, question: str) -> str:
@@ -34,8 +35,19 @@ class GeminiClient:
         """
         
         response = self.client.models.generate_content(
-            model='gemini-3.6-flash',
+            model=self.model_name,
             contents=prompt,
         )
         
         return response.text
+
+    def start_chat(self):
+        """Создает и возвращает объект сессии чата Gemini."""
+        return self.client.chats.create(model=self.model_name)
+
+    def send_chat_message(self, chat_session, message: str) -> str:
+        """Отправляет сообщение в текущую сессию чата."""
+        # Объект chat_session сам хранит историю сообщений
+        response = chat_session.send_message(message)
+        return response.text
+    
