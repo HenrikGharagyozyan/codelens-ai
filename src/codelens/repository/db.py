@@ -89,6 +89,17 @@ class DatabaseManager:
                 (symbol_id,)
             )
             return cursor.fetchall()
+        
+    def get_incoming_calls(self, callee_name: str) -> list[sqlite3.Row]:
+        """Returns a list of functions/symbols that call the specified callee_name."""
+        with self.conn:
+            cursor = self.conn.execute("""
+                SELECT s.name AS caller_name, s.file_path, c.line_number 
+                FROM calls c
+                JOIN symbols s ON c.caller_id = s.id
+                WHERE c.callee_name = ?
+            """, (callee_name,))
+            return cursor.fetchall()
 
     def save_chunks(self, chunks: list) -> None:
         """Saves semantic code chunks to the database."""
