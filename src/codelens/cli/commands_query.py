@@ -92,9 +92,20 @@ def chat():
     vector_store = VectorStore()
     retriever = ContextRetriever(db, vector_store)
 
+    # Define the tool function that Gemini will call
+    def search_codebase(query: str) -> str:
+        """
+        Searches the repository using vector embeddings and AST graph relationships.
+        Use this tool whenever you need to look up code implementation, functions, or architecture.
+        """
+        # Show a status in the console when the model decides to search
+        with console.status(f"[bold cyan]🔍 Gemini requested codebase search for: '{query}'...", spinner="dots"):
+            context = retriever.build_context(query, limit=4)
+            return context if context else "No relevant code found."
+    
     try:
         client = GeminiClient()
-        chat_session = client.start_chat()
+        chat_session = client.start_chat_with_tools(search_codebase)
     except Exception as e:
         console.print(f"[bold red]Error initializing Gemini client:[/bold red] {e}")
         return
@@ -116,21 +127,14 @@ def chat():
             console.print("[dim]Goodbye![/dim]")
             break
 
-        with console.status("[bold cyan]Searching codebase and building context...", spinner="dots"):
-            context = retriever.build_context(question, limit=3)
-
-        if context:
-            full_prompt = f"{context}\n\nUSER QUESTION:\n{question}"
-        else:
-            full_prompt = question
-
-        with console.status("[bold magenta]CodeLens thinking...", spinner="dots"):
-            try:
-                answer = client.send_chat_message(chat_session, full_prompt)
-            except Exception as e:
-                console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
-                continue
-
         console.print("\n[bold green]CodeLens:[/bold green]\n")
-        console.print(Markdown(answer))
-        console.print()
+
+        try:
+            # Send the message directly. If the model decides to call search_codebase,
+            # the SDK automatically runs the function, sends the result to the model, and returns the final response.
+            for chunk in client.send_chat_message_stream(chat_session, question):
+                print(chunk, end="", flush=True)
+            print("\n")
+        except Exception as e:
+            console.print(f"\n[bold red]Error communicating with LLM:[/bold red] {e}")
+            continue
