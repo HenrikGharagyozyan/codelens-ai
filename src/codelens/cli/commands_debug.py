@@ -1,18 +1,18 @@
 import typer
 from rich.console import Console
-from codelens.repository.db import DatabaseManager
+from codelens.cli.context import AppContext
 
 app = typer.Typer(help="Debugging and graph visualization commands")
 console = Console()
 
 
 @app.command()
-def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for")):
+def graph(ctx: typer.Context, symbol: str = typer.Argument(..., help="Symbol name to build graph for")):
     """Show the dependency graph for a specific symbol."""
-    db = DatabaseManager()
+    app_ctx: AppContext = ctx.obj
 
     # Find the symbol itself
-    results = db.search_symbols(symbol)
+    results = app_ctx.db.search_symbols(symbol)
     if not results:
         console.print(f"[red]Symbol '{symbol}' not found in index.[/red]")
         return
@@ -33,7 +33,7 @@ def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for
     console.print(f"[bold magenta]Dependency Graph for:[/bold magenta] {target['name']} ({sym_id})\n")
 
     # Get all calls made by this function
-    calls = db.get_outgoing_calls(sym_id)
+    calls = app_ctx.db.get_outgoing_calls(sym_id)
 
     if not calls:
         console.print("[dim]This symbol doesn't call any other known functions.[/dim]")
@@ -47,10 +47,10 @@ def graph(symbol: str = typer.Argument(..., help="Symbol name to build graph for
 
 
 @app.command(name="inspect-chunks")
-def inspect_chunks(limit: int = 3):
+def inspect_chunks(ctx: typer.Context, limit: int = 3):
     """View extracted semantic chunks from the database."""
-    db = DatabaseManager()
-    chunks = db.conn.execute("SELECT chunk_id, start_line, end_line, content FROM chunks LIMIT ?", (limit,)).fetchall()
+    app_ctx: AppContext = ctx.obj
+    chunks = app_ctx.db.conn.execute("SELECT chunk_id, start_line, end_line, content FROM chunks LIMIT ?", (limit,)).fetchall()
     
     if not chunks:
         console.print("[red]No chunks found. Run 'uv run codelens index .' first.[/red]")
