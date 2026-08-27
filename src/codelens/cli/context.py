@@ -10,7 +10,7 @@ class AppContext:
     @property
     def db(self):
         if self._db is None:
-            # Импортируем только при обращении, чтобы ускорить старт CLI
+            # Import only when accessed to speed up CLI startup
             from codelens.repository.db import DatabaseManager
             self._db = DatabaseManager()
         return self._db
