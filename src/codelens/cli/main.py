@@ -6,7 +6,7 @@ app = typer.Typer(
     no_args_is_help=True
 )
 
-# Собираем все команды в единое приложение без префиксов
+# Gather all commands into a single application without prefixes
 app.add_typer(commands_index.app)
 app.add_typer(commands_query.app)
 app.add_typer(commands_debug.app)
