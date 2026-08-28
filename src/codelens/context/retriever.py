@@ -19,6 +19,57 @@ class ContextRetriever:
                 return sym['id']
         return None
 
+    def _hybrid_search(self, query: str, limit = 4) -> list[dict]:
+        """
+        Combines Semantic Vector Search (Chroma) and Lexical Keyword Search (SQLite)
+        using the Reciprocal Rank Fusion (RRF) algorithm.
+        """
+        # Fetch top candidates from both sources (ask for more than limit to rank them)
+        vector_results = self.vector_store.search(query, limit=10)
+        keyword_results = self.db.search_chunks_keyword(query, limit=10)
+
+        rrf_k = 60 # Standard constant for RRF
+        scores = {}
+        chunks_data = {}
+
+        # Score Vector Results
+        for rank, res in enumerate(vector_results):
+            chunk_id = res['metadata']['chunk_id']
+            chunks_data[chunk_id] = {
+                'chunk_id': chunk_id,
+                'document': res['document'],
+                'metadata': res['metadata']
+            }
+            # Formula: 1 / (k + rank + 1)
+            scores[chunk_id] = scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank + 1))
+
+        # Score Keyword Results
+        for rank, row in enumerate(keyword_results):
+            chunk_id = row['chunk_id']
+            # If the keyword chunk isn't in vector results, build its dictionary structure
+            if chunk_id not in chunks_data:
+                chunks_data[chunk_id] = {
+                    'chunk_id': chunk_id,
+                    'document': row['content'],
+                    'metadata': {
+                        'chunk_id': chunk_id,
+                        'symbol_name': row['symbol_name'],
+                        'symbol_type': row['symbol_type'],
+                        'file_path': row['file_path'],
+                        'start_line': row['start_line'],
+                        'end_line': row['end_line']
+                    }
+                }
+            scores[chunk_id] = scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank + 1))
+
+        # Sort everything by final RRF score (highest to lowest)
+        ranked_chunk_ids = sorted(scores.keys(), key=lambda cid: scores[cid], reverse=True)
+        
+        # Return only the best `limit` chunks
+        return [chunks_data[cid] for cid in ranked_chunk_ids[:limit]]
+
+
+
     def build_context(self, query: str, limit: int = 4) -> str | None:
         """Build enriched context (code + call graph) for the LLM."""
         
@@ -65,3 +116,4 @@ class ContextRetriever:
         final_context = "\n\n---\n\n".join(context_blocks)
         
         return f"THE FOLLOWING CONTEXT IS PROVIDED FROM THE PROJECT KNOWLEDGE BASE (WITH CODE AND CALL GRAPH):\n\n{final_context}"
+    
