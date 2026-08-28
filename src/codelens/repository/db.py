@@ -81,6 +81,19 @@ class DatabaseManager:
             )
             return cursor.fetchall()
 
+    def search_chunks_keyword(self, query: str, limit: int = 10) -> list[sqlite3.Row]:
+        """Lexical search for chunks by keyword match in code content or symbol name."""
+        with self.conn:
+            # We search for the query in file paths, symbol names, or the raw code content
+            cursor = self.conn.execute(
+                """SELECT * FROM chunks 
+                   WHERE content LIKE ? 
+                      OR symbol_name LIKE ? 
+                      OR file_path LIKE ? 
+                   LIMIT ?""",
+                (f"%{query}%", f"%{query}%", f"%{query}%", limit)
+            )
+
     def get_outgoing_calls(self, symbol_id: str) -> list[sqlite3.Row]:
         """Returns a list of all functions called by the specified symbol."""
         with self.conn:
