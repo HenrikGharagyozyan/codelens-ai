@@ -100,5 +100,11 @@ class GeminiClient:
         """Sends a message and returns a generator for streaming output (prints character by character)."""
         response_stream = chat_session.send_message_stream(message)
         for chunk in response_stream:
-            if chunk.text:
-                yield chunk.text
+            # Work around the `non-text parts` warning by reading only text parts manually.
+            if getattr(chunk, 'candidates', None):
+                for candidate in chunk.candidates:
+                    if getattr(candidate, "content", None) and getattr(candidate.content, "parts", None):
+                        for part in candidate.content.parts:
+                            # If a response part contains text, return it
+                            if getattr(part, "text", None):
+                                yield part.text
