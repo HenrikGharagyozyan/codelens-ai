@@ -155,7 +155,7 @@ class DatabaseManager:
             )
 
     def get_chat_history(self, session_id: str) -> list[sqlite3.Row]:
-        """Возвращает историю сообщений для конкретной сессии в хронологическом порядке."""
+        """Returns the chat history for a specific session in chronological order."""
         with self.conn:
             cursor = self.conn.execute(
                 "SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
@@ -164,7 +164,7 @@ class DatabaseManager:
             return cursor.fetchall()
             
     def get_recent_sessions(self, limit: int = 5) -> list[sqlite3.Row]:
-        """Возвращает список последних чат-сессий."""
+        """Returns a list of recent chat sessions."""
         with self.conn:
             cursor = self.conn.execute(
                 "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?", (limit,)
