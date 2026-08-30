@@ -30,6 +30,14 @@ class CodebaseIndexer:
                 full_path = repo.root / f.path
                 classes, functions = parse_python_file(full_path)
 
+                # Принудительно ставим относительные пути для всех символов 
+                for cls in classes:
+                    cls.file_path = str(f.path)
+                    for method in cls.methods:
+                        method.file_path = str(f.path)
+                for func in functions:
+                    func.file_path = str(f.path)
+
                 all_symbols.extend(classes)
                 for cls in classes:
                     all_symbols.extend(cls.methods)
