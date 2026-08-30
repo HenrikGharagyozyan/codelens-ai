@@ -91,7 +91,7 @@ class GeminiClient:
             tools=[search_tool_fn], # Pass the function as a tool
         )
 
-        # Преобразуем наши словари в объекты types.Content для SDK
+        # Convert our dictionaries to types.Content objects for the SDK
         history = None 
         if history_dicts:
             history = []

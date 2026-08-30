@@ -35,7 +35,7 @@ def search(ctx: typer.Context, query: str = typer.Argument(..., help="Symbol nam
 @app.command(name="search-semantic")
 def search_semantic(ctx: typer.Context, query: str = typer.Argument(..., help="Query to search by meaning")):
     """Search the codebase by semantic meaning using Embeddings."""
-    app_ctx = AppContext = ctx.obj
+    app_ctx = ctx.obj
     
     with console.status("[bold cyan]Searching vector database...", spinner="dots"):
         results = app_ctx.vector_store.search(query, limit=3)
@@ -116,7 +116,7 @@ def chat(ctx: typer.Context):
         session_id = selected['id']
         session_created = True
         
-        # Извлекаем историю из БД
+        # Extract chat history from the database
         history_rows = app_ctx.db.get_chat_history(session_id)
         history_dicts = [{'role': row['role'], 'content': row['content']} for row in history_rows]
         console.print(f"\n[dim]Continuing session: {selected['title']}[/dim]\n")
@@ -150,7 +150,7 @@ def chat(ctx: typer.Context):
             console.print("[dim]Goodbye![/dim]")
             break
 
-        # Создаем запись сессии в БД при отправке первого сообщения
+        # Create a session record in the database when the first message is sent
         if not session_created:
             title = question[:40] + ("..." if len(question) > 40 else "")
             app_ctx.db.create_chat_session(session_id, title=title)
@@ -159,17 +159,17 @@ def chat(ctx: typer.Context):
         console.print("\n[bold green]CodeLens:[/bold green]\n")
 
         try:
-            # Сохраняем вопрос пользователя
+            # Save the user's question
             app_ctx.db.add_chat_message(session_id, "user", question)
 
-            # Собираем и печатаем стриминг
+            # Collect and print the stream
             full_response = ""
             for chunk in app_ctx.gemini.send_chat_message_stream(chat_session, question):
                 print(chunk, end="", flush=True)
                 full_response += chunk
             print("\n")
             
-            # Сохраняем ответ модели
+            # Save the model's response
             app_ctx.db.add_chat_message(session_id, "model", full_response)
 
         except Exception as e:
