@@ -48,6 +48,22 @@ class DatabaseManager:
                     end_line INTEGER,
                     content TEXT
                 );
+
+
+                CREATE TABLE IF NOT EXISTS chat_sessions (
+                    id TEXT PRIMARY KEY,
+                    title TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS chat_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    role TEXT NOT NULL, -- 'user' or 'model'
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+                );
             """)
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
@@ -93,6 +109,7 @@ class DatabaseManager:
                    LIMIT ?""",
                 (f"%{query}%", f"%{query}%", f"%{query}%", limit)
             )
+            return cursor.fetchall()
 
     def get_outgoing_calls(self, symbol_id: str) -> list[sqlite3.Row]:
         """Returns a list of all functions called by the specified symbol."""
@@ -125,6 +142,34 @@ class DatabaseManager:
                 (c.chunk_id, c.file_path, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.content)
                 for c in chunks
             ])
+
+    def create_chat_session(self, session_id: str, title: str = "New Chat Session"):
+        with self.conn:
+            self.conn.execute("INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title))
+
+    def add_chat_message(self, session_id: str, role: str, content: str):
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)",
+                (session_id, role, content)
+            )
+
+    def get_chat_history(self, session_id: str) -> list[sqlite3.Row]:
+        """Возвращает историю сообщений для конкретной сессии в хронологическом порядке."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
+                (session_id,)
+            )
+            return cursor.fetchall()
+            
+    def get_recent_sessions(self, limit: int = 5) -> list[sqlite3.Row]:
+        """Возвращает список последних чат-сессий."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?", (limit,)
+            )
+            return cursor.fetchall()
     
     def close(self):
         self.conn.close()
