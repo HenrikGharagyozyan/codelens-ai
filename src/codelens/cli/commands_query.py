@@ -1,7 +1,8 @@
+import uuid
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.prompt import Prompt
+from rich.prompt import Prompt, IntPrompt
 
 from codelens.cli.context import AppContext
 
@@ -94,9 +95,40 @@ def chat(ctx: typer.Context):
         with console.status(f"[bold cyan]🔍 Gemini requested codebase search for: '{query}'...", spinner="dots"):
             context = app_ctx.retriever.build_context(query, limit=4)
             return context if context else "No relevant code found."
+
+    # History logic
+    recent_sessions = app_ctx.db.get_recent_sessions(limit=5)
+    session_id = None
+    history_dicts = None
+    session_created = False
+
+    if recent_sessions:
+        console.print("\n[bold cyan]Recent chat sessions:[/bold cyan]")
+        for idx, sess in enumerate(recent_sessions, 1):
+            console.print(f"  {idx}. [bold]{sess['title']}[/bold] [dim]({sess['created_at']})[/dim]")
+        console.print(f"  0. [bold green]Start a NEW session[/bold green]")
+
+    valid_choices = [str(i) for i in range(len(recent_sessions) + 1)]
+    choice = IntPrompt.ask("\nSelect a session to continue (or 0 for new)", choices=valid_choices, default=0)
+
+    if choice > 0:
+        selected = recent_sessions[choice - 1]
+        session_id = selected['id']
+        session_created = True
+        
+        # Извлекаем историю из БД
+        history_rows = app_ctx.db.get_chat_history(session_id)
+        history_dicts = [{'role': row['role'], 'content': row['content']} for row in history_rows]
+        console.print(f"\n[dim]Continuing session: {selected['title']}[/dim]\n")
+
+    if not session_id:
+        session_id = str(uuid.uuid4())
+        session_created = False
+        console.print("\n[dim]Starting a new chat session...[/dim]\n")
+
     
     try:
-        chat_session = app_ctx.gemini.start_chat_with_tools(search_codebase)
+        chat_session = app_ctx.gemini.start_chat_with_tools(search_codebase, history_dicts=history_dicts)
     except Exception as e:
         console.print(f"[bold red]Error initializing Gemini client:[/bold red] {e}")
         return
@@ -118,14 +150,28 @@ def chat(ctx: typer.Context):
             console.print("[dim]Goodbye![/dim]")
             break
 
+        # Создаем запись сессии в БД при отправке первого сообщения
+        if not session_created:
+            title = question[:40] + ("..." if len(question) > 40 else "")
+            app_ctx.db.create_chat_session(session_id, title=title)
+            session_created = True
+
         console.print("\n[bold green]CodeLens:[/bold green]\n")
 
         try:
-            # Send the message directly. If the model decides to call search_codebase,
-            # the SDK automatically runs the function, sends the result to the model, and returns the final response.
+            # Сохраняем вопрос пользователя
+            app_ctx.db.add_chat_message(session_id, "user", question)
+
+            # Собираем и печатаем стриминг
+            full_response = ""
             for chunk in app_ctx.gemini.send_chat_message_stream(chat_session, question):
                 print(chunk, end="", flush=True)
+                full_response += chunk
             print("\n")
+            
+            # Сохраняем ответ модели
+            app_ctx.db.add_chat_message(session_id, "model", full_response)
+
         except Exception as e:
             console.print(f"\n[bold red]Error communicating with LLM:[/bold red] {e}")
             continue
