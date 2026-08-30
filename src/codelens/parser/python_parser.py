@@ -14,7 +14,14 @@ class PythonAstVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef):
         # Extract base class names (from which the current class inherits)
-        bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
+        bases = []
+        for base in node.bases:
+            if isinstance(base, ast.Name):
+                bases.append(base.id)
+            elif isinstance(base, ast.Attribute):
+                bases.append(base.attr)
+            else:
+                bases.append("UnknownBase")
         
         cls_symbol = Class(
             name=node.name,
@@ -26,11 +33,13 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.classes.append(cls_symbol)
         
         # Save the pointer so that the following functions are written as methods of this class
+        previous_class = self.current_class
         self.current_class = cls_symbol
         # Continue traversal inside the class (parse methods)
         self.generic_visit(node)
-        # Remove the pointer when exiting the class
-        self.current_class = None
+
+        # RESTORE CONTEXT when exiting the class
+        self.current_class = previous_class
 
 
     def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
@@ -81,9 +90,17 @@ class PythonAstVisitor(ast.NodeVisitor):
 
 def parse_python_file(path: Path) -> tuple[list[Class], list[Function]]:
     """Reads the file, builds an AST and returns the found classes and functions."""
-    code = path.read_text(encoding="utf-8")
-    tree = ast.parse(code)
-    
+    try:
+        code = path.read_text(encoding="utf-8")
+    except Exception:
+        return [], []
+
+    # Catch SyntaxError so broken files don't stop the whole indexer
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return [], []
+        
     visitor = PythonAstVisitor(str(path))
     visitor.visit(tree)
     
