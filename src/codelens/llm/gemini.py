@@ -80,7 +80,7 @@ class GeminiClient:
         response = chat_session.send_message(message)
         return response.text
 
-    def start_chat_with_tools(self, search_tool_fn: Callable[[str], str]):
+    def start_chat_with_tools(self, search_tool_fn: Callable[[str], str], history_dicts: list[dict] = None):
         """
         Creates a chat session with a connected code-search tool.
         `search_tool_fn` is a Python function that Gemini can call itself.
@@ -91,9 +91,22 @@ class GeminiClient:
             tools=[search_tool_fn], # Pass the function as a tool
         )
 
+        # Преобразуем наши словари в объекты types.Content для SDK
+        history = None 
+        if history_dicts:
+            history = []
+            for msg in history_dicts:
+                history.append(
+                    types.Content(
+                        role=msg['role'],
+                        parts=[types.Part.from_text(text=msg['content'])]
+                    )
+                )
+
         return self.client.chats.create(
             model=self.model_name,
-            config=config
+            config=config,
+            history=history
         )
 
     def send_chat_message_stream(self, chat_session, message: str):
