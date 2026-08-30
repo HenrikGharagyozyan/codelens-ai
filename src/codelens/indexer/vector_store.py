@@ -25,7 +25,9 @@ class VectorStore:
             {
                 "file_path": c.file_path, 
                 "symbol_name": c.symbol_name, 
-                "symbol_type": c.symbol_type
+                "symbol_type": c.symbol_type,
+                "start_line": c.start_line if c.start_line is not None else -1,
+                "end_line": c.end_line if c.end_line is not None else -1
             } 
             for c in chunks
         ]

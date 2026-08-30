@@ -34,7 +34,7 @@ class ContextRetriever:
 
         # Score Vector Results
         for rank, res in enumerate(vector_results):
-            chunk_id = res['metadata']['chunk_id']
+            chunk_id = res['id']
             chunks_data[chunk_id] = {
                 'chunk_id': chunk_id,
                 'document': res['document'],
@@ -73,24 +73,25 @@ class ContextRetriever:
     def build_context(self, query: str, limit: int = 4) -> str | None:
         """Build enriched context (code + call graph) for the LLM."""
         
-        # Find relevant code chunks by meaning (vector search)
-        vector_results = self.vector_store.search(query, limit=limit)
+        results = self._hybrid_search(query, limit=limit)
         
-        if not vector_results:
+        if not results:
             return None
 
         context_blocks = []
         
         # Enrich each chunk with its call graph from SQLite
-        for idx, res in enumerate(vector_results, 1):
+        for idx, res in enumerate(results, 1):
             doc = res['document']
             meta = res['metadata']
             
             symbol_name = meta.get('symbol_name')
             file_path = meta.get('file_path')
+            start_line = meta.get('start_line', '?')
+            end_line = meta.get('end_line', '?')
             
             block = [
-                f"### Chunk {idx}: {symbol_name} (File: {file_path})",
+                f"### Chunk {idx}: {symbol_name} (File: {file_path}:{start_line}-{end_line})",
                 f"```py\n{doc}\n```"
             ]
 
