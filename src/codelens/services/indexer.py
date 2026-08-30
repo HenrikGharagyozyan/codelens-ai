@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from rich.console import Console
 from rich.progress import track
@@ -14,6 +15,16 @@ console = Console()
 class CodebaseIndexer:
     def __init__(self, path: str = "."):
         self.path = path
+
+        # Forcibly remove old databases before reindexing
+        db_path = Path(".codelens.db")
+        chroma_path = Path(".codelens_vector")
+
+        if db_path.exists():
+            db_path.unlink()
+        if chroma_path.exists() and chroma_path.is_dir():
+            shutil.rmtree(chroma_path)
+
         self.db = DatabaseManager()
 
     def run(self):
@@ -30,7 +41,7 @@ class CodebaseIndexer:
                 full_path = repo.root / f.path
                 classes, functions = parse_python_file(full_path)
 
-                # Принудительно ставим относительные пути для всех символов 
+                # Force relative paths for all symbols
                 for cls in classes:
                     cls.file_path = str(f.path)
                     for method in cls.methods:
