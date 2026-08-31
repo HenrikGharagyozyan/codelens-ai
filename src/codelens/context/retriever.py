@@ -9,15 +9,16 @@ class ContextRetriever:
 
     def _get_exact_symbol_id(self, symbol_name: str, file_path: str):
         """Helper method for finding the exact symbol ID."""
-        if not symbol_name:
+        if not symbol_name or not file_path:
             return None
             
-        symbols = self.db.search_symbols(symbol_name)
-        for sym in symbols:
-            # Find an exact match by name and file
-            if sym['name'] == symbol_name and sym['file_path'] == file_path:
-                return sym['id']
-        return None
+        with self.db.conn:
+            cursor = self.db.conn.execute(
+                "SELECT id FROM symbols WHERE name = ? AND file_path = ?",
+                (symbol_name, file_path)
+            )
+            row = cursor.fetchone()
+            return row['id'] if row else None
 
     def _hybrid_search(self, query: str, limit = 4) -> list[dict]:
         """
@@ -70,51 +71,116 @@ class ContextRetriever:
 
 
 
+    def _number_lines(self, code: str, start_line: int) -> str:
+        """
+        Prefixes every source line with its real line number in the file.
+
+        This is the single most effective anti-hallucination measure: the model
+        reads the line number off the code instead of interpolating it from the
+        chunk header, which is what makes citations inside large chunks wrong.
+        """
+        lines = code.split("\n")
+        width = len(str(start_line + len(lines) - 1))
+        return "\n".join(
+            f"{start_line + offset:>{width}} | {line}"
+            for offset, line in enumerate(lines)
+        )
+
+    def _format_related(self, label: str, names: list[str]) -> str:
+        """Renders call-graph neighbours with their verified file:line locations."""
+        locations = self.db.get_symbol_locations(names)
+
+        rendered = []
+        for name in names:
+            places = locations.get(name)
+            if places:
+                # A name can be defined in several files; list every location so
+                # the model picks one that exists instead of inventing one.
+                cites = ", ".join(f"{path}:{line}" for path, line in sorted(places))
+                rendered.append(f"`{name}` ({cites})")
+            else:
+                # Not indexed (stdlib, third-party). Say so explicitly, otherwise
+                # the model will happily make a location up.
+                rendered.append(f"`{name}` (external, no location)")
+
+        return f"{label} {'; '.join(rendered)}"
+
     def build_context(self, query: str, limit: int = 4) -> str | None:
         """Build enriched context (code + call graph) for the LLM."""
-        
+
         results = self._hybrid_search(query, limit=limit)
-        
+
         if not results:
             return None
 
         context_blocks = []
-        
+
         # Enrich each chunk with its call graph from SQLite
         for idx, res in enumerate(results, 1):
             doc = res['document']
             meta = res['metadata']
-            
+
             symbol_name = meta.get('symbol_name')
             file_path = meta.get('file_path')
-            start_line = meta.get('start_line', '?')
-            end_line = meta.get('end_line', '?')
-            
-            block = [
-                f"### Chunk {idx}: {symbol_name} (File: {file_path}:{start_line}-{end_line})",
-                f"```py\n{doc}\n```"
-            ]
+            start_line = meta.get('start_line')
+            end_line = meta.get('end_line')
+
+            if start_line is None or start_line < 0:
+                # Without a trustworthy anchor we must not print numbered lines.
+                body = f"```py\n{doc}\n```"
+                header = f"### Chunk {idx}: {symbol_name} (File: {file_path}, line numbers unavailable)"
+            else:
+                body = f"```py\n{self._number_lines(doc, start_line)}\n```"
+                header = (
+                    f"### Chunk {idx}: {symbol_name} "
+                    f"(File: {file_path}, lines {start_line}-{end_line}) "
+                    f"-> cite as {file_path}:{start_line}"
+                )
+
+            block = [header, body]
 
             # If this is a specific symbol (not the file's global scope)
             if symbol_name and symbol_name != "global":
+                # Nested definitions inside this chunk, with their exact lines.
+                # Without this the model guesses where a method starts inside a
+                # class chunk and lands one or two lines off.
+                if file_path and start_line is not None and end_line is not None:
+                    nested = [
+                        row for row in self.db.get_symbols_in_file(file_path)
+                        if start_line < row['line_number'] <= end_line
+                    ]
+                    if nested:
+                        listing = "; ".join(
+                            f"`{row['name']}` -> {file_path}:{row['line_number']}"
+                            for row in nested
+                        )
+                        block.append(f"**Definitions inside this chunk:** {listing}")
+
                 # What calls this function?
                 incoming = self.db.get_incoming_calls(symbol_name)
                 if incoming:
-                    callers = sorted(list(set([row['caller_name'] for row in incoming])))
-                    block.append(f"**What calls `{symbol_name}`:** {', '.join(callers)}")
-                
+                    callers = sorted(set(row['caller_name'] for row in incoming))
+                    block.append(self._format_related(f"**What calls `{symbol_name}`:**", callers))
+
                 # What does this function call?
                 sym_id = self._get_exact_symbol_id(symbol_name, file_path)
                 if sym_id:
                     outgoing = self.db.get_outgoing_calls(sym_id)
                     if outgoing:
-                        callees = sorted(list(set([row['callee_name'] for row in outgoing])))
-                        block.append(f"**What `{symbol_name}` calls:** {', '.join(callees)}")
-            
+                        callees = sorted(set(row['callee_name'] for row in outgoing))
+                        block.append(self._format_related(f"**What `{symbol_name}` calls:**", callees))
+
             context_blocks.append("\n".join(block))
 
         # Combine everything into a single text block for Gemini
         final_context = "\n\n---\n\n".join(context_blocks)
-        
-        return f"THE FOLLOWING CONTEXT IS PROVIDED FROM THE PROJECT KNOWLEDGE BASE (WITH CODE AND CALL GRAPH):\n\n{final_context}"
+
+        return (
+            "THE FOLLOWING CONTEXT IS PROVIDED FROM THE PROJECT KNOWLEDGE BASE "
+            "(WITH CODE AND CALL GRAPH).\n"
+            "Every code block is prefixed with REAL file line numbers in the form "
+            "`<line> | <code>`. Cite those numbers verbatim. Never compute, guess, "
+            "or offset a line number yourself.\n\n"
+            f"{final_context}"
+        )
     

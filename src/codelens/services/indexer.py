@@ -28,6 +28,7 @@ class CodebaseIndexer:
         self.db = DatabaseManager()
 
     def run(self):
+        self.db.clear_all_indexed_data()
         scanner = RepositoryScanner(self.path)
         repo = scanner.scan()
 

@@ -23,6 +23,7 @@ class VectorStore:
         documents = [c.content for c in chunks]
         metadatas = [
             {
+                "chunk_id": c.chunk_id,
                 "file_path": c.file_path, 
                 "symbol_name": c.symbol_name, 
                 "symbol_type": c.symbol_type,

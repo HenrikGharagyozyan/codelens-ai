@@ -76,8 +76,34 @@ def ask(ctx: typer.Context, question: str = typer.Argument(..., help="Ask a ques
             console.print(f"[bold red]Error communicating with LLM:[/bold red] {e}")
             return
 
+    if not answer:
+        console.print("[yellow]The model returned an empty response.[/yellow]")
+        return
+
+    # Last line of defence: rewrite any citation that disagrees with the index.
+    answer, checks = app_ctx.verifier.repair(answer)
+
     console.print(f"\n[bold green]Question:[/bold green] {question}\n")
     console.print(Markdown(answer))
+    _report_citations(checks)
+
+
+def _report_citations(checks) -> None:
+    """Prints a short audit of the citations found in an answer."""
+    if not checks:
+        return
+
+    corrected = [c for c in checks if c.status == "corrected"]
+    dropped = [c for c in checks if c.status in ("no_symbol", "unknown_file")]
+    ok_count = sum(1 for c in checks if c.is_valid)
+
+    console.print(
+        f"\n[dim]Citations: {ok_count}/{len(checks)} verified against the index.[/dim]"
+    )
+    for c in corrected:
+        console.print(f"[yellow]  fixed:[/yellow] {c.symbol} -> {c.path}:{c.corrected_line}")
+    for c in dropped:
+        console.print(f"[red]  unverifiable line dropped:[/red] {c.path}:{c.line}")
 
 
 @app.command()
@@ -168,9 +194,15 @@ def chat(ctx: typer.Context):
                 print(chunk, end="", flush=True)
                 full_response += chunk
             print("\n")
-            
+
+            # The text is already on screen, so we cannot rewrite it in place.
+            # Report what disagreed with the index, and persist the REPAIRED
+            # text so a bad line number is not fed back into later turns.
+            repaired, checks = app_ctx.verifier.repair(full_response)
+            _report_citations(checks)
+
             # Save the model's response
-            app_ctx.db.add_chat_message(session_id, "model", full_response)
+            app_ctx.db.add_chat_message(session_id, "model", repaired)
 
         except Exception as e:
             console.print(f"\n[bold red]Error communicating with LLM:[/bold red] {e}")
