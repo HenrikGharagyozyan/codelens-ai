@@ -64,6 +64,11 @@ class DatabaseManager:
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
                 );
+
+                CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id);
+                CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_name);
+                CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
+                CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON chunks(symbol_name);
             """)
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
@@ -108,6 +113,46 @@ class DatabaseManager:
                       OR file_path LIKE ? 
                    LIMIT ?""",
                 (f"%{query}%", f"%{query}%", f"%{query}%", limit)
+            )
+            return cursor.fetchall()
+
+    def get_symbol_locations(self, names: list[str]) -> dict[str, list[tuple[str, int]]]:
+        """
+        Resolves symbol names to their real (file_path, line_number) locations.
+
+        This is what keeps LLM citations honest: any symbol we merely *mention*
+        in the context (callers, callees) still gets a verified location, so the
+        model never has to guess a line number.
+        """
+        if not names:
+            return {}
+
+        placeholders = ",".join("?" * len(names))
+        with self.conn:
+            cursor = self.conn.execute(
+                f"SELECT name, file_path, line_number FROM symbols WHERE name IN ({placeholders})",
+                names
+            )
+            locations: dict[str, list[tuple[str, int]]] = {}
+            for row in cursor:
+                locations.setdefault(row['name'], []).append((row['file_path'], row['line_number']))
+            return locations
+
+    def get_symbol_at(self, file_path: str, line_number: int) -> sqlite3.Row | None:
+        """Returns the symbol defined exactly at file_path:line_number, if any."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT * FROM symbols WHERE file_path = ? AND line_number = ?",
+                (file_path, line_number)
+            )
+            return cursor.fetchone()
+
+    def get_symbols_in_file(self, file_path: str) -> list[sqlite3.Row]:
+        """Returns every symbol defined in a file, ordered by line number."""
+        with self.conn:
+            cursor = self.conn.execute(
+                "SELECT * FROM symbols WHERE file_path = ? ORDER BY line_number",
+                (file_path,)
             )
             return cursor.fetchall()
 
@@ -170,6 +215,14 @@ class DatabaseManager:
                 "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?", (limit,)
             )
             return cursor.fetchall()
+
+    def clear_all_indexed_data(self):
+        """Полностью очищает старые данные индекса перед новым сканированием (защита от дубликатов)."""
+        with self.conn:
+            self.conn.execute("DELETE FROM calls")
+            self.conn.execute("DELETE FROM symbols")
+            self.conn.execute("DELETE FROM chunks")
+            self.conn.execute("DELETE FROM files")
     
     def close(self):
         self.conn.close()
