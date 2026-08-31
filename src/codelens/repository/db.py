@@ -217,7 +217,7 @@ class DatabaseManager:
             return cursor.fetchall()
 
     def clear_all_indexed_data(self):
-        """Полностью очищает старые данные индекса перед новым сканированием (защита от дубликатов)."""
+        """Fully clears the old index data before a new scan (protects against duplicates)."""
         with self.conn:
             self.conn.execute("DELETE FROM calls")
             self.conn.execute("DELETE FROM symbols")

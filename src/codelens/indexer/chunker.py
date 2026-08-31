@@ -31,7 +31,18 @@ class SemanticChunker:
             symbols_by_file[sym.file_path].append(sym)
             
         for file_path, file_symbols in symbols_by_file.items():
-            full_path = self.root_dir / file_path
+            # GUARANTEE that we use relative paths for the DB and absolute paths for reading the file
+            path = Path(file_path)
+            if path.is_absolute():
+                full_path = path
+                try:
+                    rel_path = str(path.relative_to(self.root_dir))
+                except ValueError:
+                    rel_path = path.name
+            else:
+                full_path = self.root_dir / path
+                rel_path = str(path)
+
             if not full_path.exists():
                 continue
                 
@@ -57,7 +68,7 @@ class SemanticChunker:
                     
                 chunk = Chunk(
                     chunk_id=f"{sym.file_path}::{sym.name}:{sym.line_number}",
-                    file_path=sym.file_path,
+                    file_path=rel_path,
                     symbol_name=sym.name,
                     start_line=sym.line_number,
                     end_line=end_idx,
