@@ -6,6 +6,7 @@ class AppContext:
     _vector_store = None
     _retriever = None
     _gemini_client = None
+    _verifier = None
 
     @property
     def db(self):
@@ -35,3 +36,10 @@ class AppContext:
             from codelens.llm.gemini import GeminiClient
             self._gemini_client = GeminiClient()
         return self._gemini_client
+
+    @property
+    def verifier(self):
+        if self._verifier is None:
+            from codelens.context.citations import CitationVerifier
+            self._verifier = CitationVerifier(self.db)
+        return self._verifier
