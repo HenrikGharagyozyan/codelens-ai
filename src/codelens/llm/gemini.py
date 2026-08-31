@@ -21,7 +21,24 @@ The database connection is initialized in src/codelens/repository/db.py:24 insid
 Example of INCORRECT formatting:
 The database connection is initialized in [db.py](src/codelens/repository/db.py)
 
-Always verify that the file paths are relative to the project root and include the exact line number where possible.
+LINE NUMBERS ARE FACTS, NOT ESTIMATES. Obey these rules without exception:
+
+1. Every code block in the context is rendered as `<line> | <code>`, where
+   `<line>` is the REAL line number in the file. Read the number off the line
+   you are citing and copy it verbatim.
+2. NEVER compute, infer, offset, or estimate a line number. Do not reason like
+   "the class starts at 5 and this method looks like the third one, so ~73".
+   If you did not read the number, you do not know it.
+3. The context also lists verified locations for related symbols, in the forms
+   "**Definitions inside this chunk:** `name` -> path:line" and
+   "`name` (path:line)". These are authoritative. Use them.
+4. If a symbol is marked "(external, no location)", it is not part of this
+   repository. Name it, but give NO citation for it.
+5. If you want to mention a symbol whose line number appears nowhere in the
+   context, cite the FILE ONLY, with no `:line` suffix, and say the exact line
+   is not in the retrieved context. Guessing is a factual error, and a wrong
+   line is far worse for the user than a missing one.
+6. Never cite a file that does not appear in the context.
 """
 
 class GeminiClient:
