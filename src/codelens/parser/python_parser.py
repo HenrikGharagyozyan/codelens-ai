@@ -78,12 +78,11 @@ class PythonAstVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call):
         if self.current_function:
-            # If it's a simple call (e.g. print(), my_func())
+            # Store a tuple (name, call line number)
             if isinstance(node.func, ast.Name):
-                self.current_function.calls.append(node.func.id)
-            # If it's a method call (e.g. self.scan(), db.insert())
+                self.current_function.calls.append((node.func.id, node.lineno))
             elif isinstance(node.func, ast.Attribute):
-                self.current_function.calls.append(node.func.attr)
+                self.current_function.calls.append((node.func.attr, node.lineno))
                 
         self.generic_visit(node)
 
