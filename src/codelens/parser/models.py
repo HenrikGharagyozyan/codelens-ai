@@ -11,7 +11,7 @@ class Symbol:
 @dataclass
 class Function(Symbol):
     args: list[str] = field(default_factory=list)
-    calls: list[str] = field(default_factory=list)
+    calls: list[tuple[str, int]] = field(default_factory=list)
     is_async: bool = False
 
 
