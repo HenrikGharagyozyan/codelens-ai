@@ -2,7 +2,7 @@ import typer
 from rich.console import Console
 from pathlib import Path
 
-from codelens.services.indexer import CodebaseIndexer
+from codelens.indexer.runner import CodebaseIndexer
 from codelens.parser.python_parser import parse_python_file
 
 
