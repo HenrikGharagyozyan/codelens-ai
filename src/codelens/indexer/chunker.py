@@ -53,7 +53,14 @@ class SemanticChunker:
             for sym in file_symbols:
                 # Indexing in the Python AST starts at 1, while arrays start at 0
                 start_idx = sym.line_number - 1
-                end_idx = sym.end_line_number if sym.end_line_number else len(lines)
+
+                if isinstance(sym, Class) and sym.methods:
+                    # If this is a class with methods, the class chunk ends
+                    # right before the declaration of its first method.
+                    first_method_line = min(m.line_number for m in sym.methods)
+                    end_idx = first_method_line - 1  # Exclusive
+                else:
+                    end_idx = sym.end_line_number if sym.end_line_number else len(lines)
                 
                 # Extract the exact piece of code
                 code_content = "".join(lines[start_idx:end_idx])
