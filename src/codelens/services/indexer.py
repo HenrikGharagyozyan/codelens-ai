@@ -16,15 +16,6 @@ class CodebaseIndexer:
     def __init__(self, path: str = "."):
         self.path = path
 
-        # Forcibly remove old databases before reindexing
-        db_path = Path(".codelens.db")
-        chroma_path = Path(".codelens_vector")
-
-        if db_path.exists():
-            db_path.unlink()
-        if chroma_path.exists() and chroma_path.is_dir():
-            shutil.rmtree(chroma_path)
-
         self.db = DatabaseManager()
 
     def run(self):
@@ -65,16 +56,18 @@ class CodebaseIndexer:
                         self.db.insert_symbol(meth_id, method.name, "method", str(f.path), method.line_number)
                         symbols_count += 1
 
-                        for call_name in method.calls:
-                            self.db.insert_call(meth_id, call_name, method.line_number)
+                        for call_name, call_line in method.calls:
+                            # Pass the actual call line number, not the start of the method
+                            self.db.insert_call(meth_id, call_name, call_line)
 
                 for func in functions:
                     sym_id = f"{f.path}::{func.name}"
                     self.db.insert_symbol(sym_id, func.name, "function", str(f.path), func.line_number)
                     symbols_count += 1
 
-                    for call_name in func.calls:
-                        self.db.insert_call(sym_id, call_name, func.line_number)
+                    for call_name, call_line in func.calls:
+                        # Pass the actual call line number, not the start of the function
+                        self.db.insert_call(sym_id, call_name, call_line)
 
         with console.status("[bold green]Chunking codebase...", spinner="dots"):
             chunker = SemanticChunker(self.path)
