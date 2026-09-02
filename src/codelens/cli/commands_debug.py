@@ -65,7 +65,8 @@ def inspect_chunks(ctx: typer.Context, limit: int = 3):
 
     for row in chunks:
         console.print(
-            f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} (Lines: {row['start_line']}-{row['end_line']})"
+            f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} "
+            f"(Lines: {row['start_line']}-{row['end_line']})"
         )
         console.print(f"```python\n{row['content']}\n```\n")
         console.print("-" * 50)

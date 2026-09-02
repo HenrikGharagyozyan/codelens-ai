@@ -51,7 +51,8 @@ def search_semantic(
     for idx, res in enumerate(results, 1):
         meta = res["metadata"]
         console.print(
-            f"{idx}. [bold cyan]{meta['symbol_name']}[/bold cyan] in [dim]{meta['file_path']}[/dim] (Score: {res['distance']:.4f})"
+            f"{idx}. [bold cyan]{meta['symbol_name']}[/bold cyan] "
+            f"in [dim]{meta['file_path']}[/dim] (Score: {res['distance']:.4f})"
         )
         # Print the first 3 lines of code for a preview
         preview_lines = res["document"].split("\n")[:3]

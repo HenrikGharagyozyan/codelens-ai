@@ -57,7 +57,7 @@ class PythonAstVisitor(ast.NodeVisitor):
             docstring=ast.get_docstring(node),
         )
 
-        # If we are currently inside a class, add the function to methods, otherwise to global functions
+        # Inside a class the function is a method; otherwise it is a global function
         if self.current_class:
             self.current_class.methods.append(func)
         else:

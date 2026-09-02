@@ -100,7 +100,8 @@ class DatabaseManager:
     ):
         with self.conn:
             self.conn.execute(
-                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) "
+                "VALUES (?, ?, ?, ?, ?)",
                 (symbol_id, name, sym_type, file_path, line_number),
             )
 
@@ -214,7 +215,8 @@ class DatabaseManager:
             self.conn.execute("DELETE FROM chunks")  # Clear stale chunks during reindexing
             self.conn.executemany(
                 """
-                INSERT INTO chunks (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
+                INSERT INTO chunks
+                    (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
                 [
@@ -248,7 +250,8 @@ class DatabaseManager:
         """Returns the chat history for a specific session in chronological order."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
+                "SELECT role, content FROM chat_messages "
+                "WHERE session_id = ? ORDER BY created_at ASC",
                 (session_id,),
             )
             return cursor.fetchall()

@@ -33,7 +33,7 @@ class SemanticChunker:
             symbols_by_file[sym.file_path].append(sym)
 
         for file_path, file_symbols in symbols_by_file.items():
-            # GUARANTEE that we use relative paths for the DB and absolute paths for reading the file
+            # GUARANTEE relative paths for the DB and absolute paths for reading the file
             path = Path(file_path)
             if path.is_absolute():
                 full_path = path

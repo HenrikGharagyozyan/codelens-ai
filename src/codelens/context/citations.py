@@ -61,7 +61,8 @@ class CitationVerifier:
         # The line may legitimately point inside a symbol's body rather than at
         # its definition. Accept it if it falls within a known chunk's range.
         inside = self.db.conn.execute(
-            "SELECT symbol_name FROM chunks WHERE file_path = ? AND start_line <= ? AND end_line >= ? LIMIT 1",
+            "SELECT symbol_name FROM chunks "
+            "WHERE file_path = ? AND start_line <= ? AND end_line >= ? LIMIT 1",
             (path, line, line),
         ).fetchone()
         if inside is not None:

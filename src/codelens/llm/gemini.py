@@ -9,17 +9,21 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 # Strict LLM instructions: respond so that paths are clickable in the terminal
-SYSTEM_PROMPT = """You are CodeLens, an expert AI engineering assistant helping a developer navigate their local codebase.
+SYSTEM_PROMPT = """You are CodeLens, an expert AI engineering assistant helping a developer
+navigate their local codebase.
 You have access to the codebase structure, AST metadata, and file contents.
 
 CRITICAL REQUIREMENT FOR CITATIONS AND LINKS:
-Whenever you refer to a specific file, class, function, or line of code, you MUST provide a direct, terminal-clickable citation.
+Whenever you refer to a specific file, class, function, or line of code, you MUST provide
+a direct, terminal-clickable citation.
 Format the citation strictly as: `path/to/file.py:line_number`
 Do NOT use Markdown links (e.g., [file](path/to/file.py)).
-Do NOT wrap the path in backticks if it prevents the terminal emulator from making it clickable (plain text is preferred for paths).
+Do NOT wrap the path in backticks if it prevents the terminal emulator from making it
+clickable (plain text is preferred for paths).
 
 Example of correct formatting:
-The database connection is initialized in src/codelens/repository/db.py:24 inside the __init__ method.
+The database connection is initialized in src/codelens/repository/db.py:24 inside the
+__init__ method.
 
 Example of INCORRECT formatting:
 The database connection is initialized in [db.py](src/codelens/repository/db.py)
@@ -66,7 +70,8 @@ class GeminiClient:
         """Builds the system prompt and sends a request to the AI."""
 
         prompt = f"""
-        Below is some relevant context extracted from the user's repository via AST parsing and dependency tracking:
+        Below is some relevant context extracted from the user's repository via AST
+        parsing and dependency tracking:
         
         --- CODE CONTEXT START ---
         {context_chunks}
@@ -74,7 +79,8 @@ class GeminiClient:
         
         Based ONLY on the provided context, answer the following question. 
         Include code snippets in your answer where helpful.
-        If the context does not contain enough information to answer fully, say so, but provide the best possible insight based on what is available.
+        If the context does not contain enough information to answer fully, say so, but
+        provide the best possible insight based on what is available.
         
         User's question: {question}
         """
@@ -122,7 +128,10 @@ class GeminiClient:
         return self.client.chats.create(model=self.model_name, config=config, history=history)
 
     def send_chat_message_stream(self, chat_session, message: str):
-        """Sends a message and returns a generator for streaming output (prints character by character)."""
+        """Sends a message and returns a generator for streaming output.
+
+        The caller prints the yielded fragments as they arrive, character by character.
+        """
         response_stream = chat_session.send_message_stream(message)
         for chunk in response_stream:
             # Work around the `non-text parts` warning by reading only text parts manually.
