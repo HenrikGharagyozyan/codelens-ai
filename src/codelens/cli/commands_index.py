@@ -1,11 +1,10 @@
+from pathlib import Path
+
 import typer
 from rich.console import Console
-from pathlib import Path
 
 from codelens.indexer.runner import CodebaseIndexer
 from codelens.parser.python_parser import parse_python_file
-
-
 
 app = typer.Typer(help="Indexing and inspection commands")
 console = Console()
@@ -35,22 +34,22 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
 def inspect(file: str = typer.Argument(..., help="Path to a Python file to inspect")):
     """Parse a single Python file and show its AST symbols."""
     path = Path(file)
-    
-    if not path.exists() or path.suffix != '.py':
+
+    if not path.exists() or path.suffix != ".py":
         console.print("[red]Error: Please provide a valid Python file.[/red]")
         raise typer.Exit(1)
-        
-    classes, functions = parse_python_file(path)
-    
+
+    classes, functions, _ = parse_python_file(path)
+
     console.print(f"[bold green]Parsed symbols in:[/bold green] {file}\n")
-    
-    # Print clases and methods
+
+    # Print classes and methods
     for cls in classes:
         base_str = f"({', '.join(cls.bases)})" if cls.bases else ""
         console.print(f"[blue]Class:[/blue] {cls.name}{base_str} (line {cls.line_number})")
         for method in cls.methods:
             console.print(f"  ├── [cyan]Method:[/cyan] {method.name}({', '.join(method.args)})")
-            
+
     # Print global functions
     if functions:
         console.print("\n[magenta]Global Functions:[/magenta]")

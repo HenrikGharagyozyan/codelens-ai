@@ -92,35 +92,37 @@ class DatabaseManager:
             # INSERT OR REPLACE updates the record if it already exists
             self.conn.execute(
                 "INSERT OR REPLACE INTO files (path, language, size, lines) VALUES (?, ?, ?, ?)",
-                (path, language, size, lines)
+                (path, language, size, lines),
             )
 
-    def insert_symbol(self, symbol_id: str, name: str, sym_type: str, file_path: str, line_number: int):
+    def insert_symbol(
+        self, symbol_id: str, name: str, sym_type: str, file_path: str, line_number: int
+    ):
         with self.conn:
             self.conn.execute(
-                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) VALUES (?, ?, ?, ?, ?)",
-                (symbol_id, name, sym_type, file_path, line_number)
+                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (symbol_id, name, sym_type, file_path, line_number),
             )
 
     def insert_call(self, caller_id: str, callee_name: str, line_number: int):
         with self.conn:
             self.conn.execute(
                 "INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)",
-                (caller_id, callee_name, line_number)
+                (caller_id, callee_name, line_number),
             )
 
     def insert_import(self, file_path: str, module: str | None, name: str, alias: str | None):
         with self.conn:
             self.conn.execute(
                 "INSERT INTO imports (file_path, module, name, alias) VALUES (?, ?, ?, ?)",
-                (file_path, module, name, alias)
+                (file_path, module, name, alias),
             )
 
     def insert_inherit(self, class_id: str, base_name: str):
         with self.conn:
             self.conn.execute(
-                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)",
-                (class_id, base_name)
+                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", (class_id, base_name)
             )
 
     def search_symbols(self, query: str) -> list[sqlite3.Row]:
@@ -128,7 +130,7 @@ class DatabaseManager:
         with self.conn:
             cursor = self.conn.execute(
                 "SELECT * FROM symbols WHERE name LIKE ? LIMIT 15",
-                (f"%{query}%",)  # % means any text before and after the query
+                (f"%{query}%",),  # % means any text before and after the query
             )
             return cursor.fetchall()
 
@@ -142,7 +144,7 @@ class DatabaseManager:
                       OR symbol_name LIKE ? 
                       OR file_path LIKE ? 
                    LIMIT ?""",
-                (f"%{query}%", f"%{query}%", f"%{query}%", limit)
+                (f"%{query}%", f"%{query}%", f"%{query}%", limit),
             )
             return cursor.fetchall()
 
@@ -161,11 +163,11 @@ class DatabaseManager:
         with self.conn:
             cursor = self.conn.execute(
                 f"SELECT name, file_path, line_number FROM symbols WHERE name IN ({placeholders})",
-                names
+                names,
             )
             locations: dict[str, list[tuple[str, int]]] = {}
             for row in cursor:
-                locations.setdefault(row['name'], []).append((row['file_path'], row['line_number']))
+                locations.setdefault(row["name"], []).append((row["file_path"], row["line_number"]))
             return locations
 
     def get_symbol_at(self, file_path: str, line_number: int) -> sqlite3.Row | None:
@@ -173,7 +175,7 @@ class DatabaseManager:
         with self.conn:
             cursor = self.conn.execute(
                 "SELECT * FROM symbols WHERE file_path = ? AND line_number = ?",
-                (file_path, line_number)
+                (file_path, line_number),
             )
             return cursor.fetchone()
 
@@ -181,8 +183,7 @@ class DatabaseManager:
         """Returns every symbol defined in a file, ordered by line number."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT * FROM symbols WHERE file_path = ? ORDER BY line_number",
-                (file_path,)
+                "SELECT * FROM symbols WHERE file_path = ? ORDER BY line_number", (file_path,)
             )
             return cursor.fetchall()
 
@@ -190,59 +191,77 @@ class DatabaseManager:
         """Returns a list of all functions called by the specified symbol."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT callee_name, line_number FROM calls WHERE caller_id = ?",
-                (symbol_id,)
+                "SELECT callee_name, line_number FROM calls WHERE caller_id = ?", (symbol_id,)
             )
             return cursor.fetchall()
-        
+
     def get_incoming_calls(self, callee_name: str) -> list[sqlite3.Row]:
         """Returns a list of functions/symbols that call the specified callee_name."""
         with self.conn:
-            cursor = self.conn.execute("""
+            cursor = self.conn.execute(
+                """
                 SELECT s.name AS caller_name, s.file_path, c.line_number 
                 FROM calls c
                 JOIN symbols s ON c.caller_id = s.id
                 WHERE c.callee_name = ?
-            """, (callee_name,))
+            """,
+                (callee_name,),
+            )
             return cursor.fetchall()
 
     def save_chunks(self, chunks: list) -> None:
         """Saves semantic code chunks to the database."""
         with self.conn:
             self.conn.execute("DELETE FROM chunks")  # Clear stale chunks during reindexing
-            self.conn.executemany("""
-                INSERT INTO chunks (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
+            self.conn.executemany(
+                """
+                INSERT INTO chunks
+                    (chunk_id, file_path, symbol_name, symbol_type, start_line, end_line, content)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, [
-                (c.chunk_id, c.file_path, c.symbol_name, c.symbol_type, c.start_line, c.end_line, c.content)
-                for c in chunks
-            ])
+            """,
+                [
+                    (
+                        c.chunk_id,
+                        c.file_path,
+                        c.symbol_name,
+                        c.symbol_type,
+                        c.start_line,
+                        c.end_line,
+                        c.content,
+                    )
+                    for c in chunks
+                ],
+            )
 
     def create_chat_session(self, session_id: str, title: str = "New Chat Session"):
         with self.conn:
-            self.conn.execute("INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title))
+            self.conn.execute(
+                "INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title)
+            )
 
     def add_chat_message(self, session_id: str, role: str, content: str):
         with self.conn:
             self.conn.execute(
                 "INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)",
-                (session_id, role, content)
+                (session_id, role, content),
             )
 
     def get_chat_history(self, session_id: str) -> list[sqlite3.Row]:
         """Returns the chat history for a specific session in chronological order."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
-                (session_id,)
+                "SELECT role, content FROM chat_messages "
+                "WHERE session_id = ? ORDER BY created_at ASC",
+                (session_id,),
             )
             return cursor.fetchall()
-            
+
     def get_recent_sessions(self, limit: int = 5) -> list[sqlite3.Row]:
         """Returns a list of recent chat sessions."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?", (limit,)
+                "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?",
+                (limit,),
             )
             return cursor.fetchall()
 
@@ -255,6 +274,6 @@ class DatabaseManager:
             self.conn.execute("DELETE FROM files")
             self.conn.execute("DELETE FROM imports")
             self.conn.execute("DELETE FROM inherits")
-    
+
     def close(self):
         self.conn.close()

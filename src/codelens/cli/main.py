@@ -1,12 +1,9 @@
 import typer
+
+from codelens.cli import commands_debug, commands_index, commands_query
 from codelens.cli.context import AppContext
 
-from codelens.cli import commands_index, commands_query, commands_debug
-
-app = typer.Typer(
-    help="CodeLens AI - Codebase Analysis & Graph Tool",
-    no_args_is_help=True
-)
+app = typer.Typer(help="CodeLens AI - Codebase Analysis & Graph Tool", no_args_is_help=True)
 
 
 @app.callback()

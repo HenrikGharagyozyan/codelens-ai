@@ -25,9 +25,10 @@ CITATION_RE = re.compile(
 @dataclass
 class CitationCheck:
     """One citation found in an answer and what the index says about it."""
+
     path: str
     line: int
-    status: str           # "ok" | "corrected" | "unknown_file" | "no_symbol"
+    status: str  # "ok" | "corrected" | "unknown_file" | "no_symbol"
     corrected_line: int | None = None
     symbol: str | None = None
 
@@ -45,7 +46,7 @@ class CitationVerifier:
 
     def _known_files(self) -> set[str]:
         rows = self.db.conn.execute("SELECT path FROM files").fetchall()
-        return {row['path'] for row in rows}
+        return {row["path"] for row in rows}
 
     def check(self, path: str, line: int) -> CitationCheck:
         """Checks a single citation, correcting the line when we can."""
@@ -55,16 +56,17 @@ class CitationVerifier:
         # Exact hit: a symbol really is defined at that line.
         symbol = self.db.get_symbol_at(path, line)
         if symbol is not None:
-            return CitationCheck(path, line, "ok", symbol=symbol['name'])
+            return CitationCheck(path, line, "ok", symbol=symbol["name"])
 
         # The line may legitimately point inside a symbol's body rather than at
         # its definition. Accept it if it falls within a known chunk's range.
         inside = self.db.conn.execute(
-            "SELECT symbol_name FROM chunks WHERE file_path = ? AND start_line <= ? AND end_line >= ? LIMIT 1",
-            (path, line, line)
+            "SELECT symbol_name FROM chunks "
+            "WHERE file_path = ? AND start_line <= ? AND end_line >= ? LIMIT 1",
+            (path, line, line),
         ).fetchone()
         if inside is not None:
-            return CitationCheck(path, line, "ok", symbol=inside['symbol_name'])
+            return CitationCheck(path, line, "ok", symbol=inside["symbol_name"])
 
         return CitationCheck(path, line, "no_symbol")
 
@@ -81,7 +83,9 @@ class CitationVerifier:
         # Same file, wrong line -> we know the right answer, so fix it.
         for loc_path, loc_line in locations:
             if loc_path == path:
-                return CitationCheck(path, line, "corrected", corrected_line=loc_line, symbol=symbol_name)
+                return CitationCheck(
+                    path, line, "corrected", corrected_line=loc_line, symbol=symbol_name
+                )
 
         return self.check(path, line)
 
@@ -95,7 +99,7 @@ class CitationVerifier:
             # If the model named the symbol near the citation, use the stronger
             # name-aware check, which can repair the line instead of only
             # flagging it.
-            window = answer[max(0, match.start() - 200):match.start()]
+            window = answer[max(0, match.start() - 200) : match.start()]
             names = re.findall(r"`([A-Za-z_][\w.]*)`", window)
             resolved = None
             for name in reversed(names):
@@ -125,7 +129,7 @@ class CitationVerifier:
         result = []
         cursor = 0
         for match, check in zip(CITATION_RE.finditer(answer), checks):
-            result.append(answer[cursor:match.start()])
+            result.append(answer[cursor : match.start()])
 
             if check.status == "corrected" and check.corrected_line is not None:
                 result.append(f"{check.path}:{check.corrected_line}")

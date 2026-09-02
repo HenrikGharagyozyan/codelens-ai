@@ -1,12 +1,11 @@
-from pathlib import Path
 from rich.console import Console
 from rich.progress import track
 
-from codelens.repository.scanner import RepositoryScanner
-from codelens.parser.python_parser import parse_python_file
-from codelens.repository.db import DatabaseManager
 from codelens.indexer.chunker import SemanticChunker
 from codelens.indexer.vector_store import VectorStore
+from codelens.parser.python_parser import parse_python_file
+from codelens.repository.db import DatabaseManager
+from codelens.repository.scanner import RepositoryScanner
 
 console = Console()
 
@@ -58,11 +57,13 @@ class CodebaseIndexer:
 
                     # Insert inheritance relationships into the database
                     for base in cls.bases:
-                        self.db.insert_inheritance(sym_id, base)
+                        self.db.insert_inherit(sym_id, base)
 
                     for method in cls.methods:
                         meth_id = f"{f.path}::{cls.name}.{method.name}"
-                        self.db.insert_symbol(meth_id, method.name, "method", str(f.path), method.line_number)
+                        self.db.insert_symbol(
+                            meth_id, method.name, "method", str(f.path), method.line_number
+                        )
                         symbols_count += 1
 
                         for call_name, call_line in method.calls:
@@ -71,7 +72,9 @@ class CodebaseIndexer:
 
                 for func in functions:
                     sym_id = f"{f.path}::{func.name}"
-                    self.db.insert_symbol(sym_id, func.name, "function", str(f.path), func.line_number)
+                    self.db.insert_symbol(
+                        sym_id, func.name, "function", str(f.path), func.line_number
+                    )
                     symbols_count += 1
 
                     for call_name, call_line in func.calls:
@@ -86,5 +89,3 @@ class CodebaseIndexer:
             vector_store.add_chunks(chunks)
 
         return len(repo.files), symbols_count, self.db.db_path.absolute()
-
-    
