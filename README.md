@@ -1,5 +1,9 @@
 # CodeLens AI
 
+[![CI](https://github.com/HenrikGharagyozyan/codelens-ai/actions/workflows/ci.yaml/badge.svg)](https://github.com/HenrikGharagyozyan/codelens-ai/actions/workflows/ci.yaml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **Ask your codebase questions and get answers with citations you can trust.**
 
 CodeLens is a developer tool, not another RAG chatbot. It parses your repository
@@ -56,13 +60,15 @@ cd codelens-ai
 uv sync
 ```
 
-`ask` and `chat` need a Gemini API key. Create a `.env` in the project root:
+`ask` and `chat` need a Gemini API key — they call `gemini-3.6-flash`. Create a
+`.env` in the project root:
 
 ```bash
 GEMINI_API_KEY=your_key_here
 ```
 
-The other commands (`index`, `search`, `graph`, `inspect`) work without a key.
+`.env` is already in `.gitignore`. The other commands (`index`, `search`, `graph`,
+`inspect`) work without a key.
 
 ---
 
@@ -85,14 +91,17 @@ uv run codelens chat
 
 | Command | What it does |
 |---|---|
-| `codelens index [path]` | Scan, parse, chunk, and embed a repository |
+| `codelens index [path]` | Scan, parse, chunk, and embed a repository (default: `.`) |
 | `codelens ask "<question>"` | One-shot question, answered with verified citations |
 | `codelens chat` | Interactive session; the model searches the codebase itself |
 | `codelens search <name>` | Exact symbol lookup by name |
 | `codelens search-semantic "<query>"` | Vector search by meaning |
 | `codelens graph <symbol>` | Show what a symbol calls |
 | `codelens inspect <file.py>` | Dump the AST symbols of one file |
-| `codelens inspect-chunks` | Inspect the semantic chunks that were indexed |
+| `codelens inspect-chunks [--limit N]` | Inspect the semantic chunks that were indexed |
+| `codelens init` | Placeholder — prints a confirmation, no side effects yet |
+
+Every command takes `--help`.
 
 ### `search-semantic`
 
@@ -234,7 +243,26 @@ Citations: 14/15 verified against the index.
 | `.codelens_vector/` | ChromaDB: chunk embeddings |
 
 Both are rebuilt from scratch on every `codelens index`, so the vector store and
-the symbol tables never drift apart. Chat history is preserved.
+the symbol tables never drift apart. Chat history is preserved across re-indexing.
+
+Both paths are covered by `.gitignore` — the index is a build artifact, not source.
+
+---
+
+## Limitations
+
+Worth knowing before you point this at a large repository.
+
+- **Python only.** Other languages are scanned for file metadata but produce no
+  symbols, no chunks, and no graph edges. Tree-sitter support is on the roadmap.
+- **Every index is a full rebuild.** There is no incremental mode yet, so
+  re-indexing a monorepo costs the same as indexing it the first time.
+- **Call edges are matched by name.** A call to `connect()` links to every symbol
+  named `connect` in the index; the graph does not resolve which one is meant.
+- **The lexical half of hybrid search is SQL `LIKE`,** not BM25 — it finds
+  identifiers reliably but ranks them crudely.
+- **Gemini only.** `ask` and `chat` are wired directly to the Google GenAI SDK;
+  there is no provider abstraction yet.
 
 ---
 
@@ -242,12 +270,31 @@ the symbol tables never drift apart. Chat history is preserved.
 
 ```bash
 uv sync
-uv run pytest
+
+uv run pytest          # 260 tests
+uv run ruff check .    # lint
+uv run ruff format .   # format
 ```
 
-The test suite covers the parser (nested classes, base-class extraction, call
-line numbers, async definitions) and the citation pipeline (line numbering,
-symbol resolution, verification, repair).
+Lint and tests both run in CI on every push and pull request.
+
+| Test module | Covers |
+|---|---|
+| `test_db.py` | Schema, inserts, symbol/chunk queries, call graph, chat history, index reset |
+| `test_citations.py` | Citation regex, verification, line correction, answer repair |
+| `test_cli.py` | Every command via Typer's `CliRunner`, plus lazy `AppContext` wiring |
+| `test_retriever.py` | RRF ranking, line numbering, prompt-context assembly |
+| `test_parser.py` | AST extraction, plus syntax errors, binary and missing files |
+| `test_gemini.py` | Client config, prompt building, tool sessions, stream parsing |
+| `test_chunker.py` | Chunk boundaries, docstring handling, path normalisation |
+| `test_runner.py` | A full index over a real repository on disk, end to end |
+| `test_scanner.py` | `.gitignore` rules, binary skipping, file metadata |
+| `test_vector_store.py` | Metadata written to ChromaDB and results parsed back |
+
+The suite makes no network calls and loads no embedding model: ChromaDB and the
+Gemini SDK are replaced by in-memory doubles, `load_dotenv` is neutralised so a
+real `.env` cannot leak into a test, and everything that writes runs under a
+temporary directory — your own `.codelens.db` is never touched.
 
 ---
 
@@ -262,12 +309,14 @@ Working today:
 - Vector search (ChromaDB) and keyword search (SQLite)
 - Hybrid retrieval with Reciprocal Rank Fusion
 - Call-graph context expansion
+- `import` extraction and inheritance edges, stored in SQLite
 - LLM answering with verified citations
 - Interactive chat with persistent sessions and tool use
 
 On the roadmap:
 
-- `import` extraction and `INHERITS` graph edges
+- Using the `imports` and `inherits` tables in retrieval — they are indexed today,
+  but the retriever does not read them yet
 - FTS5/BM25 in place of `LIKE` for the lexical half of hybrid search
 - Multi-hop call chains in graph retrieval
 - Git integration — `git log`/`blame` aware answers
