@@ -65,6 +65,22 @@ class DatabaseManager:
                     FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
                 );
 
+                CREATE TABLE IF NOT EXISTS imports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT,
+                    module TEXT,
+                    name TEXT,
+                    alias TEXT,
+                    FOREIGN KEY (file_path) REFERENCES files(path)
+                );
+
+                CREATE TABLE IF NOT EXISTS inherits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    class_id TEXT,
+                    base_name TEXT,
+                    FOREIGN KEY (class_id) REFERENCES symbols(id)
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id);
                 CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_name);
                 CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
@@ -91,6 +107,20 @@ class DatabaseManager:
             self.conn.execute(
                 "INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)",
                 (caller_id, callee_name, line_number)
+            )
+
+    def insert_import(self, file_path: str, module: str | None, name: str, alias: str | None):
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO imports (file_path, module, name, alias) VALUES (?, ?, ?, ?)",
+                (file_path, module, name, alias)
+            )
+
+    def insert_inherit(self, class_id: str, base_name: str):
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)",
+                (class_id, base_name)
             )
 
     def search_symbols(self, query: str) -> list[sqlite3.Row]:
@@ -223,6 +253,8 @@ class DatabaseManager:
             self.conn.execute("DELETE FROM symbols")
             self.conn.execute("DELETE FROM chunks")
             self.conn.execute("DELETE FROM files")
+            self.conn.execute("DELETE FROM imports")
+            self.conn.execute("DELETE FROM inherits")
     
     def close(self):
         self.conn.close()
