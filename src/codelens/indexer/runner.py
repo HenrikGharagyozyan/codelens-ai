@@ -14,7 +14,6 @@ console = Console()
 class CodebaseIndexer:
     def __init__(self, path: str = "."):
         self.path = path
-
         self.db = DatabaseManager()
 
     def run(self):
@@ -34,7 +33,10 @@ class CodebaseIndexer:
 
             if f.language == "py":
                 full_path = repo.root / f.path
-                classes, functions = parse_python_file(full_path)
+                classes, functions, imports = parse_python_file(full_path)
+
+                for imp in imports:
+                    self.db.insert_import(str(f.path), imp.module, imp.name, imp.alias)
 
                 # Force relative paths for all symbols
                 for cls in classes:
@@ -53,6 +55,10 @@ class CodebaseIndexer:
                     sym_id = f"{f.path}::{cls.name}"
                     self.db.insert_symbol(sym_id, cls.name, "class", str(f.path), cls.line_number)
                     symbols_count += 1
+
+                    # Insert inheritance relationships into the database
+                    for base in cls.bases:
+                        self.db.insert_inheritance(sym_id, base)
 
                     for method in cls.methods:
                         meth_id = f"{f.path}::{cls.name}.{method.name}"
@@ -80,3 +86,5 @@ class CodebaseIndexer:
             vector_store.add_chunks(chunks)
 
         return len(repo.files), symbols_count, self.db.db_path.absolute()
+
+    

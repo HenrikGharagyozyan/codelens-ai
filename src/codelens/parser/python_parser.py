@@ -1,6 +1,6 @@
 import ast
 from pathlib import Path
-from .models import Class, Function
+from .models import Class, Function, Import
 
 
 class PythonAstVisitor(ast.NodeVisitor):
@@ -8,6 +8,7 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.file_path = file_path
         self.classes: list[Class] = []
         self.functions: list[Function] = []
+        self.imports: list[Import] = []  # Store imported dependencies
         self.current_class: Class | None = None  # Pointer to the current class (for methods)
         self.current_function: Function | None = None  # Pointer to the current function
 
@@ -28,7 +29,8 @@ class PythonAstVisitor(ast.NodeVisitor):
             file_path=self.file_path,
             line_number=node.lineno,
             bases=bases,
-            end_line_number=getattr(node, 'end_lineno', node.lineno)
+            end_line_number=getattr(node, 'end_lineno', node.lineno),
+            docstring=ast.get_docstring(node)
         )
         self.classes.append(cls_symbol)
         
@@ -52,7 +54,8 @@ class PythonAstVisitor(ast.NodeVisitor):
             line_number=node.lineno,
             args=args,
             is_async=isinstance(node, ast.AsyncFunctionDef),
-            end_line_number=getattr(node, 'end_lineno', node.lineno)
+            end_line_number=getattr(node, 'end_lineno', node.lineno),
+            docstring=ast.get_docstring(node)
         )
         
         # If we are currently inside a class, add the function to methods, otherwise to global functions
@@ -86,21 +89,43 @@ class PythonAstVisitor(ast.NodeVisitor):
                 
         self.generic_visit(node)
 
+    def visit_Import(self, node: ast.Import):
+        for alias in node.names:
+            self.imports.append(Import(
+                file_path=self.file_path,
+                module=None,
+                name=alias.name,
+                alias=alias.asname
+            ))
+        self.generic_visit(node)
 
-def parse_python_file(path: Path) -> tuple[list[Class], list[Function]]:
-    """Reads the file, builds an AST and returns the found classes and functions."""
+    def visit_ImportFrom(self, node: ast.ImportFrom):
+        module_name = node.module if node.module else ""
+        for alias in node.names:
+            self.imports.append(Import(
+                file_path=self.file_path,
+                module=module_name,
+                name=alias.name,
+                alias=alias.asname
+            ))
+        self.generic_visit(node)
+
+
+def parse_python_file(path: Path) -> tuple[list[Class], list[Function], list[Import]]:
+    """Reads the file, builds an AST and returns the found classes, functions, and imports."""
     try:
         code = path.read_text(encoding="utf-8")
     except Exception:
-        return [], []
+        return [], [], []
 
     # Catch SyntaxError so broken files don't stop the whole indexer
     try:
         tree = ast.parse(code)
     except SyntaxError:
-        return [], []
+        return [], [], []
         
     visitor = PythonAstVisitor(str(path))
     visitor.visit(tree)
     
-    return visitor.classes, visitor.functions
+    return visitor.classes, visitor.functions, visitor.imports
+

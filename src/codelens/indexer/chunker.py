@@ -65,9 +65,16 @@ class SemanticChunker:
                         end_idx = sym.end_line_number if sym.end_line_number else len(lines)
 
                     header_code = "".join(lines[start_idx:end_idx]).strip()
+
+                    # Ensure docstring is explicitly added if it somehow got lost
+                    doc_str = ""
+                    if sym.docstring and sym.docstring not in header_code:
+                        doc_str = f'\n    """{sym.docstring}"""'
+
                     method_names = [m.name for m in sym.methods]
                     methods_str = f"\n# Methods: {', '.join(method_names)}" if method_names else ""
-                    code_content = f"{header_code}{methods_str}".strip()
+                    
+                    code_content = f"{header_code}{doc_str}{methods_str}".strip()
                 else:
                     end_idx = sym.end_line_number if sym.end_line_number else len(lines)
                     code_content = "".join(lines[start_idx:end_idx]).strip()
