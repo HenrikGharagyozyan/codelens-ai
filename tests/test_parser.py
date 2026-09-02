@@ -8,16 +8,19 @@ Locks in fixes for:
 """
 
 import pytest
+
 from codelens.parser.python_parser import parse_python_file
 
 
 @pytest.fixture
 def parse_code(tmp_path):
     """Fixture to write a temporary Python code snippet and parse it."""
+
     def _parse(code: str):
         file_path = tmp_path / "sample.py"
         file_path.write_text(code, encoding="utf-8")
         return parse_python_file(file_path)
+
     return _parse
 
 
@@ -32,7 +35,7 @@ class Outer:
         def inner_method(self):
             pass
 """
-        classes, functions, _ = parse_code(code)  # <--- обновили распаковку
+        classes, functions, _ = parse_code(code)
         class_map = {c.name: c for c in classes}
 
         assert "Outer" in class_map
@@ -109,27 +112,27 @@ class Worker:
 
     def test_extracts_imports(self, parse_code):
         """Imports (both regular and from) must be captured."""
-        code = '''
+        code = """
 import os
 import os.path as path
 from typing import List, Optional as Opt
-'''
+"""
         _, _, imports = parse_code(code)
-        
+
         assert len(imports) == 4
-        
+
         # import os
         assert imports[0].name == "os"
         assert imports[0].module is None
-        
+
         # import os.path as path
         assert imports[1].name == "os.path"
         assert imports[1].alias == "path"
-        
+
         # from typing import List
         assert imports[2].module == "typing"
         assert imports[2].name == "List"
-        
+
         # from typing import Optional as Opt
         assert imports[3].module == "typing"
         assert imports[3].name == "Optional"

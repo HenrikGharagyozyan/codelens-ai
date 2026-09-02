@@ -1,6 +1,9 @@
 from pathlib import Path
+
 import pathspec
+
 from .models import File, Repository
+
 
 class RepositoryScanner:
     def __init__(self, root_path: str | Path):
@@ -43,15 +46,12 @@ class RepositoryScanner:
                     lines_count = sum(1 for _ in f)
 
                 # Get the file extension without the dot (for example, 'py')
-                ext = file_path.suffix.lstrip('.') or "unknown"
+                ext = file_path.suffix.lstrip(".") or "unknown"
                 stat = file_path.stat()
 
-                files.append(File(
-                    path=rel_path,
-                    language=ext,
-                    size=stat.st_size,
-                    lines=lines_count
-                ))
+                files.append(
+                    File(path=rel_path, language=ext, size=stat.st_size, lines=lines_count)
+                )
             except UnicodeDecodeError:
                 # Skip binary files
                 pass

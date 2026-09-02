@@ -1,9 +1,9 @@
 import os
 from typing import Callable
+
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
-
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -44,23 +44,23 @@ LINE NUMBERS ARE FACTS, NOT ESTIMATES. Obey these rules without exception:
 6. Never cite a file that does not appear in the context.
 """
 
+
 class GeminiClient:
     def __init__(self):
         load_dotenv()
-        
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY is missing in .env file. Please create one.")
-        
+
         self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-3.6-flash'
+        self.model_name = "gemini-3.6-flash"
 
         # Configure generation parameters and the system prompt
         self.config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
-            temperature=0.2, # Low temperature for accurate code citations
+            temperature=0.2,  # Low temperature for accurate code citations
         )
-
 
     def ask(self, context_chunks: str, question: str) -> str:
         """Builds the system prompt and sends a request to the AI."""
@@ -78,21 +78,16 @@ class GeminiClient:
         
         User's question: {question}
         """
-        
+
         response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=self.config
+            model=self.model_name, contents=prompt, config=self.config
         )
-        
+
         return response.text
 
     def start_chat(self):
         """Creates and returns a Gemini chat session object."""
-        return self.client.chats.create(
-            model=self.model_name,
-            config=self.config
-        )
+        return self.client.chats.create(model=self.model_name, config=self.config)
 
     def send_chat_message(self, chat_session, message: str) -> str:
         """Sends a message to the current chat session and returns the full response."""
@@ -100,7 +95,9 @@ class GeminiClient:
         response = chat_session.send_message(message)
         return response.text
 
-    def start_chat_with_tools(self, search_tool_fn: Callable[[str], str], history_dicts: list[dict] = None):
+    def start_chat_with_tools(
+        self, search_tool_fn: Callable[[str], str], history_dicts: list[dict] = None
+    ):
         """
         Creates a chat session with a connected code-search tool.
         `search_tool_fn` is a Python function that Gemini can call itself.
@@ -108,35 +105,32 @@ class GeminiClient:
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             temperature=0.2,
-            tools=[search_tool_fn], # Pass the function as a tool
+            tools=[search_tool_fn],  # Pass the function as a tool
         )
 
         # Convert our dictionaries to types.Content objects for the SDK
-        history = None 
+        history = None
         if history_dicts:
             history = []
             for msg in history_dicts:
                 history.append(
                     types.Content(
-                        role=msg['role'],
-                        parts=[types.Part.from_text(text=msg['content'])]
+                        role=msg["role"], parts=[types.Part.from_text(text=msg["content"])]
                     )
                 )
 
-        return self.client.chats.create(
-            model=self.model_name,
-            config=config,
-            history=history
-        )
+        return self.client.chats.create(model=self.model_name, config=config, history=history)
 
     def send_chat_message_stream(self, chat_session, message: str):
         """Sends a message and returns a generator for streaming output (prints character by character)."""
         response_stream = chat_session.send_message_stream(message)
         for chunk in response_stream:
             # Work around the `non-text parts` warning by reading only text parts manually.
-            if getattr(chunk, 'candidates', None):
+            if getattr(chunk, "candidates", None):
                 for candidate in chunk.candidates:
-                    if getattr(candidate, "content", None) and getattr(candidate.content, "parts", None):
+                    if getattr(candidate, "content", None) and getattr(
+                        candidate.content, "parts", None
+                    ):
                         for part in candidate.content.parts:
                             # If a response part contains text, return it
                             if getattr(part, "text", None):

@@ -25,7 +25,15 @@ def db(tmp_path):
 
     manager.conn.execute(
         "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("src/app.py::Service:5", "src/app.py", "Service", "class", 5, 18, "class Service:\n    pass"),
+        (
+            "src/app.py::Service:5",
+            "src/app.py",
+            "Service",
+            "class",
+            5,
+            18,
+            "class Service:\n    pass",
+        ),
     )
     manager.conn.commit()
 
