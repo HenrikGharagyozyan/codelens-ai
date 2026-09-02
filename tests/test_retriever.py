@@ -3,7 +3,7 @@
 import pytest
 
 from codelens.context.retriever import ContextRetriever
-from conftest import FakeVectorStore
+from tests.conftest import FakeVectorStore
 
 
 def vector_hit(chunk_id, document="code", **meta):
