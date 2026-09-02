@@ -4,6 +4,7 @@ Locks in fixes for:
 - Nested classes and class context isolation
 - Base classes extracted from ast.Attribute (e.g., typing.Generic)
 - Function calls tracking accurate line numbers (callee_name, call_line)
+- Imports and Docstrings extraction
 """
 
 import pytest
@@ -22,7 +23,6 @@ def parse_code(tmp_path):
 
 class TestPythonParser:
     def test_nested_classes_do_not_corrupt_outer_context(self, parse_code):
-        """ Nested classes must not leak methods into the outer class."""
         code = """
 class Outer:
     def outer_method(self):
@@ -32,7 +32,7 @@ class Outer:
         def inner_method(self):
             pass
 """
-        classes, functions = parse_code(code)
+        classes, functions, _ = parse_code(code)  # <--- обновили распаковку
         class_map = {c.name: c for c in classes}
 
         assert "Outer" in class_map
@@ -46,7 +46,6 @@ class Outer:
         assert functions == []
 
     def test_extracts_attribute_and_name_base_classes(self, parse_code):
-        """ Base classes with attribute syntax (e.g., module.Class) must be captured."""
         code = """
 import typing
 import base_module
@@ -55,7 +54,7 @@ class MyView(typing.Generic, base_module.BaseClass, LocalBase):
     def get(self):
         pass
 """
-        classes, _ = parse_code(code)
+        classes, _, _ = parse_code(code)
         assert len(classes) == 1
         cls = classes[0]
 
@@ -64,14 +63,13 @@ class MyView(typing.Generic, base_module.BaseClass, LocalBase):
         assert "LocalBase" in cls.bases
 
     def test_records_call_line_numbers_accurately(self, parse_code):
-        """Calls must store tuples of (callee_name, call_line_number)."""
         code = """
 def process_data():
     first_call()     # line 3
 
     second_call()    # line 5
 """
-        _, functions = parse_code(code)
+        _, functions, _ = parse_code(code)
         assert len(functions) == 1
         fn = functions[0]
 
@@ -81,7 +79,6 @@ def process_data():
         assert calls[1] == ("second_call", 5)
 
     def test_async_functions_and_methods(self, parse_code):
-        """Async functions and class methods should be correctly categorized."""
         code = """
 async def async_top_level():
     await helper()
@@ -90,10 +87,50 @@ class Worker:
     async def fetch(self):
         pass
 """
-        classes, functions = parse_code(code)
+        classes, functions, _ = parse_code(code)
 
         assert len(functions) == 1
         assert functions[0].name == "async_top_level"
 
         assert len(classes) == 1
         assert classes[0].methods[0].name == "fetch"
+
+    def test_extracts_docstrings_from_classes(self, parse_code):
+        """Docstrings should be cleanly extracted for LLM context."""
+        code = '''
+class Worker:
+    """This is a worker class.
+    It does things."""
+    def work(self): pass
+'''
+        classes, _, _ = parse_code(code)
+        assert len(classes) == 1
+        assert classes[0].docstring.startswith("This is a worker class.")
+
+    def test_extracts_imports(self, parse_code):
+        """Imports (both regular and from) must be captured."""
+        code = '''
+import os
+import os.path as path
+from typing import List, Optional as Opt
+'''
+        _, _, imports = parse_code(code)
+        
+        assert len(imports) == 4
+        
+        # import os
+        assert imports[0].name == "os"
+        assert imports[0].module is None
+        
+        # import os.path as path
+        assert imports[1].name == "os.path"
+        assert imports[1].alias == "path"
+        
+        # from typing import List
+        assert imports[2].module == "typing"
+        assert imports[2].name == "List"
+        
+        # from typing import Optional as Opt
+        assert imports[3].module == "typing"
+        assert imports[3].name == "Optional"
+        assert imports[3].alias == "Opt"
