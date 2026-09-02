@@ -2,11 +2,19 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class Import:
+    file_path: str
+    module: str | None
+    name: str
+    alias: str | None
+
+@dataclass
 class Symbol:
     name: str
     file_path: str
     line_number: int
     end_line_number: int | None = None  # For chunking
+    docstring: str | None = None        # Saved documentation for LLM context
 
 @dataclass
 class Function(Symbol):
