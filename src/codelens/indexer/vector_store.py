@@ -13,6 +13,18 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"} 
         )
 
+    def clear(self):
+        """Removes all vectors from ChromaDB without wiping the database directory."""
+        try:
+            self.client.delete_collection(name="code_chunks")
+        except Exception:
+            pass
+
+        self.collection = self.client.get_or_create_collection(
+            name="code_chunks",
+            metadata={"hnsw:space": "cosine"} 
+        )
+
     def add_chunks(self, chunks: list[Chunk]):
         """Converts chunks into vectors and stores them in ChromaDB."""
         if not chunks:

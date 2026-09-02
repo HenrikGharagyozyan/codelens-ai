@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 from rich.console import Console
 from rich.progress import track
@@ -19,7 +18,11 @@ class CodebaseIndexer:
         self.db = DatabaseManager()
 
     def run(self):
+        # Clear both SQLite tables and ChromaDB vector store
         self.db.clear_all_indexed_data()
+        vector_store = VectorStore()
+        vector_store.clear()
+
         scanner = RepositoryScanner(self.path)
         repo = scanner.scan()
 
@@ -74,7 +77,6 @@ class CodebaseIndexer:
             chunks = chunker.create_chunks(all_symbols)
             self.db.save_chunks(chunks)
 
-            vector_store = VectorStore()
             vector_store.add_chunks(chunks)
 
         return len(repo.files), symbols_count, self.db.db_path.absolute()

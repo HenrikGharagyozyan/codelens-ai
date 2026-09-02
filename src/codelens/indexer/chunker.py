@@ -54,24 +54,24 @@ class SemanticChunker:
                 # Indexing in the Python AST starts at 1, while arrays start at 0
                 start_idx = sym.line_number - 1
 
-                if isinstance(sym, Class) and sym.methods:
-                    # If this is a class with methods, the class chunk ends
-                    # right before the declaration of its first method.
-                    first_method_line = min(m.line_number for m in sym.methods)
-                    end_idx = first_method_line - 1  # Exclusive
-                else:
-                    end_idx = sym.end_line_number if sym.end_line_number else len(lines)
-                
-                # Extract the exact piece of code
-                code_content = "".join(lines[start_idx:end_idx])
-                
-                # Determine the type for metadata
                 if isinstance(sym, Class):
                     sym_type = "class"
-                elif isinstance(sym, Function):
-                    sym_type = "function"
+                    if sym.methods:
+                        # If this is a class with methods, the class chunk ends
+                        # right before the declaration of its first method.
+                        first_method_line = min(m.line_number for m in sym.methods)
+                        end_idx = first_method_line - 1  # Exclusive
+                    else:
+                        end_idx = sym.end_line_number if sym.end_line_number else len(lines)
+
+                    header_code = "".join(lines[start_idx:end_idx]).strip()
+                    method_names = [m.name for m in sym.methods]
+                    methods_str = f"\n# Methods: {', '.join(method_names)}" if method_names else ""
+                    code_content = f"{header_code}{methods_str}".strip()
                 else:
-                    sym_type = "symbol"
+                    end_idx = sym.end_line_number if sym.end_line_number else len(lines)
+                    code_content = "".join(lines[start_idx:end_idx]).strip()
+                    sym_type = "function" if isinstance(sym, Function) else "symbol"
                     
                 chunk = Chunk(
                     chunk_id=f"{sym.file_path}::{sym.name}:{sym.line_number}",
