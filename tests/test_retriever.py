@@ -58,7 +58,9 @@ class TestFormatRelated:
         assert ":" not in rendered.replace("**calls:**", "")
 
     def test_all_definitions_of_an_ambiguous_name_are_listed(self, populated_db):
-        populated_db.insert_symbol("src/other.py::connect", "connect", "function", "src/other.py", 7)
+        populated_db.insert_symbol(
+            "src/other.py::connect", "connect", "function", "src/other.py", 7
+        )
         retriever = ContextRetriever(populated_db, FakeVectorStore())
 
         rendered = retriever._format_related("**calls:**", ["connect"])
@@ -79,9 +81,7 @@ class TestExactSymbolId:
     def test_returns_none_for_the_wrong_file(self, retriever):
         assert retriever._get_exact_symbol_id("run", "src/db.py") is None
 
-    @pytest.mark.parametrize(
-        ("name", "path"), [("", "src/app.py"), ("run", ""), (None, None)]
-    )
+    @pytest.mark.parametrize(("name", "path"), [("", "src/app.py"), ("run", ""), (None, None)])
     def test_returns_none_on_missing_input(self, retriever, name, path):
         assert retriever._get_exact_symbol_id(name, path) is None
 
@@ -177,8 +177,16 @@ class TestBuildContext:
 
     def test_callers_of_the_symbol_are_included(self, populated_db):
         store = FakeVectorStore(
-            [vector_hit("src/db.py::connect:42", "def connect(): ...",
-                        symbol_name="connect", file_path="src/db.py", start_line=42, end_line=44)]
+            [
+                vector_hit(
+                    "src/db.py::connect:42",
+                    "def connect(): ...",
+                    symbol_name="connect",
+                    file_path="src/db.py",
+                    start_line=42,
+                    end_line=44,
+                )
+            ]
         )
         retriever = ContextRetriever(populated_db, store)
 
@@ -189,8 +197,16 @@ class TestBuildContext:
 
     def test_callees_of_the_symbol_are_included(self, populated_db):
         store = FakeVectorStore(
-            [vector_hit("src/app.py::Service.run:10", "def run(self): ...",
-                        symbol_name="run", file_path="src/app.py", start_line=10, end_line=14)]
+            [
+                vector_hit(
+                    "src/app.py::Service.run:10",
+                    "def run(self): ...",
+                    symbol_name="run",
+                    file_path="src/app.py",
+                    start_line=10,
+                    end_line=14,
+                )
+            ]
         )
         retriever = ContextRetriever(populated_db, store)
 

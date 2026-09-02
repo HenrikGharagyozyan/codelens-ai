@@ -35,3 +35,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    # pathspec deprecates the GitWildMatchPattern factory the scanner relies on.
+    "ignore::DeprecationWarning:pathspec",
+]

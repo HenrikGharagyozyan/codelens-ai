@@ -227,7 +227,9 @@ class TestCallGraph:
 
 class TestChunks:
     def test_save_chunks_persists_every_field(self, db):
-        db.save_chunks([ChunkStub("a.py::run:1", "a.py", "run", "function", 1, 4, "def run(): ...")])
+        db.save_chunks(
+            [ChunkStub("a.py::run:1", "a.py", "run", "function", 1, 4, "def run(): ...")]
+        )
         row = db.conn.execute("SELECT * FROM chunks").fetchone()
 
         assert row["chunk_id"] == "a.py::run:1"
@@ -263,7 +265,10 @@ class TestChunks:
 
     def test_keyword_search_honours_the_limit(self, db):
         db.save_chunks(
-            [ChunkStub(f"c{i}", "a.py", f"handler_{i}", "function", i, i + 1, "body") for i in range(10)]
+            [
+                ChunkStub(f"c{i}", "a.py", f"handler_{i}", "function", i, i + 1, "body")
+                for i in range(10)
+            ]
         )
 
         assert len(db.search_chunks_keyword("handler", limit=3)) == 3

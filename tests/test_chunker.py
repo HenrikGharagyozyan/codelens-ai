@@ -81,7 +81,9 @@ class TestChunkContent:
 
     def test_a_docstring_outside_the_header_slice_is_appended(self, tmp_path):
         """A class whose first method precedes the docstring slice still keeps the docs."""
-        (tmp_path / "a.py").write_text("class A:\n    def m(self):\n        pass\n", encoding="utf-8")
+        (tmp_path / "a.py").write_text(
+            "class A:\n    def m(self):\n        pass\n", encoding="utf-8"
+        )
         cls = Class(
             name="A",
             file_path="a.py",
@@ -172,7 +174,9 @@ class TestPathHandling:
         (outside / "far.py").write_text("def f():\n    pass\n", encoding="utf-8")
         root = tmp_path / "root"
         root.mkdir()
-        func = Function(name="f", file_path=str(outside / "far.py"), line_number=1, end_line_number=2)
+        func = Function(
+            name="f", file_path=str(outside / "far.py"), line_number=1, end_line_number=2
+        )
 
         chunk = SemanticChunker(root).create_chunks([func])[0]
 

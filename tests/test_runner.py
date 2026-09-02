@@ -155,7 +155,9 @@ class TestRelationships:
         indexer, _ = indexed
         rows = indexer.db.conn.execute("SELECT class_id, base_name FROM inherits").fetchall()
 
-        assert [(row["class_id"], row["base_name"]) for row in rows] == [("app.py::Service", "Base")]
+        edges = [(row["class_id"], row["base_name"]) for row in rows]
+
+        assert edges == [("app.py::Service", "Base")]
 
 
 class TestChunkingAndVectors:
@@ -167,9 +169,7 @@ class TestChunkingAndVectors:
 
     def test_the_same_chunks_are_sent_to_the_vector_store(self, indexed, fake_store):
         indexer, _ = indexed
-        db_ids = {
-            row["chunk_id"] for row in indexer.db.conn.execute("SELECT chunk_id FROM chunks")
-        }
+        db_ids = {row["chunk_id"] for row in indexer.db.conn.execute("SELECT chunk_id FROM chunks")}
 
         assert {c.chunk_id for c in fake_store.added} == db_ids
 
