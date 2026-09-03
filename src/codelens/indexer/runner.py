@@ -1,4 +1,3 @@
-from importlib.resources import path
 
 from rich.console import Console
 from rich.progress import track
