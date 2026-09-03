@@ -1,3 +1,4 @@
+
 from rich.console import Console
 from rich.progress import track
 
@@ -11,15 +12,20 @@ console = Console()
 
 
 class CodebaseIndexer:
-    def __init__(self, path: str = "."):
+    def __init__(
+        self,
+        path: str = ".",
+        db: DatabaseManager | None = None,
+        vector_store: VectorStore | None = None,
+    ):
         self.path = path
-        self.db = DatabaseManager()
+        self.db = db if db is not None else DatabaseManager()
+        self.vector_store = vector_store if vector_store is not None else VectorStore()
 
     def run(self):
         # Clear both SQLite tables and ChromaDB vector store
         self.db.clear_all_indexed_data()
-        vector_store = VectorStore()
-        vector_store.clear()
+        self.vector_store.clear()
 
         scanner = RepositoryScanner(self.path)
         repo = scanner.scan()
@@ -31,61 +37,66 @@ class CodebaseIndexer:
             self.db.insert_file(str(f.path), f.language, f.size, f.lines)
 
             if f.language == "py":
-                full_path = repo.root / f.path
-                classes, functions, imports = parse_python_file(full_path)
+                file_symbols = self._index_file(f, repo.root)
+                all_symbols.extend(file_symbols)
 
-                for imp in imports:
-                    self.db.insert_import(str(f.path), imp.module, imp.name, imp.alias)
+        self._build_and_store_chunks(all_symbols)
 
-                # Force relative paths for all symbols
-                for cls in classes:
-                    cls.file_path = str(f.path)
-                    for method in cls.methods:
-                        method.file_path = str(f.path)
-                for func in functions:
-                    func.file_path = str(f.path)
-
-                all_symbols.extend(classes)
-                for cls in classes:
-                    all_symbols.extend(cls.methods)
-                all_symbols.extend(functions)
-
-                for cls in classes:
-                    sym_id = f"{f.path}::{cls.name}"
-                    self.db.insert_symbol(sym_id, cls.name, "class", str(f.path), cls.line_number)
-                    symbols_count += 1
-
-                    # Insert inheritance relationships into the database
-                    for base in cls.bases:
-                        self.db.insert_inherit(sym_id, base)
-
-                    for method in cls.methods:
-                        meth_id = f"{f.path}::{cls.name}.{method.name}"
-                        self.db.insert_symbol(
-                            meth_id, method.name, "method", str(f.path), method.line_number
-                        )
-                        symbols_count += 1
-
-                        for call_name, call_line in method.calls:
-                            # Pass the actual call line number, not the start of the method
-                            self.db.insert_call(meth_id, call_name, call_line)
-
-                for func in functions:
-                    sym_id = f"{f.path}::{func.name}"
-                    self.db.insert_symbol(
-                        sym_id, func.name, "function", str(f.path), func.line_number
-                    )
-                    symbols_count += 1
-
-                    for call_name, call_line in func.calls:
-                        # Pass the actual call line number, not the start of the function
-                        self.db.insert_call(sym_id, call_name, call_line)
-
-        with console.status("[bold green]Chunking codebase...", spinner="dots"):
-            chunker = SemanticChunker(self.path)
-            chunks = chunker.create_chunks(all_symbols)
-            self.db.save_chunks(chunks)
-
-            vector_store.add_chunks(chunks)
+        symbols_count = self.db.get_symbol_count()
 
         return len(repo.files), symbols_count, self.db.db_path.absolute()
+
+    def _index_file(self, f, root) -> list:
+        file_path = root / f.path
+        rel_path = str(f.path)
+        classes, functions, imports = parse_python_file(file_path)
+
+        for imp in imports:
+            self.db.insert_import(rel_path, imp.module, imp.name, imp.alias)
+
+        file_symbols = []
+
+        # Force relative paths for all symbols and persist them
+        for cls in classes:
+            cls.file_path = rel_path
+            for method in cls.methods:
+                method.file_path = rel_path
+
+            self._persist_class(cls, rel_path)
+            file_symbols.append(cls)
+            file_symbols.extend(cls.methods)
+
+        for func in functions:
+            func.file_path = rel_path
+            self._persist_function(func, rel_path)
+            file_symbols.append(func)
+
+        return file_symbols
+
+    def _persist_class(self, cls, rel_path: str):
+        sym_id = f"{rel_path}::{cls.name}"
+        self.db.insert_symbol(sym_id, cls.name, "class", rel_path, cls.line_number)
+
+        for base in cls.bases:
+            self.db.insert_inherit(sym_id, base)
+
+        for method in cls.methods:
+            meth_id = f"{rel_path}::{cls.name}.{method.name}"
+            self.db.insert_symbol(meth_id, method.name, "method", rel_path, method.line_number)
+
+            for call_name, call_line in method.calls:
+                self.db.insert_call(meth_id, call_name, call_line)
+
+    def _persist_function(self, func, rel_path: str):
+        sym_id = f"{rel_path}::{func.name}"
+        self.db.insert_symbol(sym_id, func.name, "function", rel_path, func.line_number)
+
+        for call_name, call_line in func.calls:
+            self.db.insert_call(sym_id, call_name, call_line)
+
+    def _build_and_store_chunks(self, symbols: list):
+        with console.status("[bold green]Chunking codebase...", spinner="dots"):
+            chunker = SemanticChunker(self.path)
+            chunks = chunker.create_chunks(symbols)
+            self.db.save_chunks(chunks)
+            self.vector_store.add_chunks(chunks)

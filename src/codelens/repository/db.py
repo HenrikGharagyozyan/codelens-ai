@@ -209,6 +209,12 @@ class DatabaseManager:
             )
             return cursor.fetchall()
 
+    def get_symbol_count(self) -> int:
+        """Returns the total number of unique symbols in the database."""
+        with self.conn:
+            cursor = self.conn.execute("SELECT COUNT(*) FROM symbols")
+            return cursor.fetchone()[0]
+
     def save_chunks(self, chunks: list) -> None:
         """Saves semantic code chunks to the database."""
         with self.conn:
