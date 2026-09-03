@@ -22,7 +22,6 @@ class CodebaseIndexer:
         self.path = path
         self.db = db if db is not None else DatabaseManager()
         self.vector_store = vector_store if vector_store is not None else VectorStore()
-        self._symbols_count = 0
 
     def run(self):
         # Clear both SQLite tables and ChromaDB vector store
@@ -41,11 +40,12 @@ class CodebaseIndexer:
             if f.language == "py":
                 file_symbols = self._index_file(f, repo.root)
                 all_symbols.extend(file_symbols)
-                symbols_count += len(file_symbols)
 
         self._build_and_store_chunks(all_symbols)
 
-        return len(repo.files), self._symbols_count, self.db.db_path.absolute()
+        symbols_count = self.db.get_symbol_count()
+
+        return len(repo.files), symbols_count, self.db.db_path.absolute()
 
 
     def _index_file(self, f, root) -> list:
@@ -78,7 +78,6 @@ class CodebaseIndexer:
     def _persist_class(self, cls, rel_path: str):
         sym_id = f"{rel_path}::{cls.name}"
         self.db.insert_symbol(sym_id, cls.name, "class", rel_path, cls.line_number)
-        self._symbols_count += 1
 
         for base in cls.bases:
             self.db.insert_inherit(sym_id, base)
@@ -86,7 +85,6 @@ class CodebaseIndexer:
         for method in cls.methods:
             meth_id = f"{rel_path}::{cls.name}.{method.name}"
             self.db.insert_symbol(meth_id, method.name, "method", rel_path, method.line_number)
-            self._symbols_count += 1
 
             for call_name, call_line in method.calls:
                 self.db.insert_call(meth_id, call_name, call_line)
@@ -94,7 +92,6 @@ class CodebaseIndexer:
     def _persist_function(self, func, rel_path: str):
         sym_id = f"{rel_path}::{func.name}"
         self.db.insert_symbol(sym_id, func.name, "function", rel_path, func.line_number)
-        self._symbols_count += 1
 
         for call_name, call_line in func.calls:
             self.db.insert_call(sym_id, call_name, call_line)
