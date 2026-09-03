@@ -47,7 +47,6 @@ class CodebaseIndexer:
 
         return len(repo.files), symbols_count, self.db.db_path.absolute()
 
-
     def _index_file(self, f, root) -> list:
         file_path = root / f.path
         rel_path = str(f.path)
@@ -63,7 +62,7 @@ class CodebaseIndexer:
             cls.file_path = rel_path
             for method in cls.methods:
                 method.file_path = rel_path
-                
+
             self._persist_class(cls, rel_path)
             file_symbols.append(cls)
             file_symbols.extend(cls.methods)
@@ -102,4 +101,3 @@ class CodebaseIndexer:
             chunks = chunker.create_chunks(symbols)
             self.db.save_chunks(chunks)
             self.vector_store.add_chunks(chunks)
-
