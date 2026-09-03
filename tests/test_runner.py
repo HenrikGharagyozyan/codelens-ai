@@ -6,7 +6,6 @@ all run for real, so this is the test that catches wiring mistakes between them.
 
 import pytest
 
-from codelens.indexer import runner as runner_module
 from codelens.indexer.runner import CodebaseIndexer
 from tests.conftest import FakeVectorStore
 
@@ -51,17 +50,15 @@ def project(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def fake_store(monkeypatch):
-    """Replaces VectorStore so no embedding model is loaded during indexing."""
-    store = FakeVectorStore()
-    monkeypatch.setattr(runner_module, "VectorStore", lambda *a, **kw: store)
-    return store
+def fake_store():
+    """Returns a FakeVectorStore so no embedding model is loaded during indexing."""
+    return FakeVectorStore()
 
 
 @pytest.fixture
 def indexed(project, fake_store):
     """Runs a full index and yields (indexer, result)."""
-    indexer = CodebaseIndexer(str(project))
+    indexer = CodebaseIndexer(str(project), vector_store=fake_store)
     result = indexer.run()
     yield indexer, result
     indexer.db.close()
@@ -184,7 +181,7 @@ class TestChunkingAndVectors:
 
 class TestReindexing:
     def test_clears_sqlite_and_the_vector_store_before_indexing(self, project, fake_store):
-        indexer = CodebaseIndexer(str(project))
+        indexer = CodebaseIndexer(str(project), vector_store=fake_store)
         indexer.db.insert_file("stale.py", "py", 1, 1)
         indexer.db.insert_symbol("stale::x", "x", "function", "stale.py", 1)
 
@@ -196,7 +193,7 @@ class TestReindexing:
         indexer.db.close()
 
     def test_running_twice_does_not_duplicate_rows(self, project, fake_store):
-        indexer = CodebaseIndexer(str(project))
+        indexer = CodebaseIndexer(str(project), vector_store=fake_store)
         first_files, first_symbols, _ = indexer.run()
         second_files, second_symbols, _ = indexer.run()
 
@@ -209,7 +206,7 @@ class TestReindexing:
 class TestDegenerateRepositories:
     def test_an_empty_repository_indexes_to_zero(self, tmp_path, monkeypatch, fake_store):
         monkeypatch.chdir(tmp_path)
-        indexer = CodebaseIndexer(str(tmp_path))
+        indexer = CodebaseIndexer(str(tmp_path), vector_store=fake_store)
 
         files_count, symbols_count, _ = indexer.run()
 
@@ -219,7 +216,7 @@ class TestDegenerateRepositories:
 
     def test_a_file_with_a_syntax_error_does_not_stop_the_run(self, project, fake_store):
         (project / "broken.py").write_text("def oops(:\n", encoding="utf-8")
-        indexer = CodebaseIndexer(str(project))
+        indexer = CodebaseIndexer(str(project), vector_store=fake_store)
 
         files_count, symbols_count, _ = indexer.run()
 
