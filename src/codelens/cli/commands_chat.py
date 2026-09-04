@@ -12,7 +12,6 @@ app = typer.Typer(help="Interactive chat commands")
 console = Console()
 
 
-
 def _make_search_tool(app_ctx: AppContext) -> Callable:
     def search_codebase(query: str) -> str:
         """
@@ -34,7 +33,9 @@ def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
     if recent_sessions:
         console.print("\n[bold cyan]Recent chat sessions:[/bold cyan]")
         for idx, sess in enumerate(recent_sessions, 1):
-            console.print(f"  {idx}. [bold]{sess['title']}[/bold] [dim]({sess['created_at']})[/dim]")
+            console.print(
+                f"  {idx}. [bold]{sess['title']}[/bold] [dim]({sess['created_at']})[/dim]"
+            )
         console.print("  0. [bold green]Start a NEW session[/bold green]")
 
     valid_choices = [str(i) for i in range(len(recent_sessions) + 1)]
@@ -47,7 +48,7 @@ def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
         session_id = selected["id"]
         history_rows = app_ctx.db.get_chat_history(session_id)
         history_dicts = [{"role": row["role"], "content": row["content"]} for row in history_rows]
-        
+
         console.print(f"\n[dim]Continuing session: {selected['title']}[/dim]\n")
         return session_id, history_dicts, True
 
@@ -73,7 +74,6 @@ def _chat_turn(app_ctx: AppContext, chat_session, session_id: str, question: str
 
     except Exception as e:
         console.print(f"\n[bold red]Error communicating with LLM:[/bold red] {e}")
-
 
 
 @app.command()
