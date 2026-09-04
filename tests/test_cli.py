@@ -7,7 +7,7 @@ replaced by fakes, so no database, vector store or LLM is touched.
 import pytest
 from typer.testing import CliRunner
 
-from codelens.cli import commands_index, commands_query
+from codelens.cli import commands_index, commands_search
 from codelens.cli import main as main_module
 from codelens.cli.context import AppContext
 from codelens.cli.main import app
@@ -243,7 +243,7 @@ class TestAsk:
 
 class TestCitationReport:
     def test_prints_nothing_without_citations(self, capsys):
-        commands_query._report_citations([])
+        commands_search._report_citations([])
 
         assert capsys.readouterr().out == ""
 
@@ -251,7 +251,7 @@ class TestCitationReport:
         from codelens.context.citations import CitationVerifier
 
         checks = CitationVerifier(populated_db).verify("`connect` is in src/db.py:42.")
-        commands_query._report_citations(checks)
+        commands_search._report_citations(checks)
 
         assert "1/1 verified" in capsys.readouterr().out
 
@@ -259,7 +259,7 @@ class TestCitationReport:
         from codelens.context.citations import CitationVerifier
 
         checks = CitationVerifier(populated_db).verify("See src/ghost.py:9.")
-        commands_query._report_citations(checks)
+        commands_search._report_citations(checks)
 
         assert "unverifiable line dropped" in capsys.readouterr().out
 
