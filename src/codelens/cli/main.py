@@ -1,6 +1,6 @@
 import typer
 
-from codelens.cli import commands_debug, commands_index, commands_query
+from codelens.cli import commands_debug, commands_index, commands_search, commands_chat
 from codelens.cli.context import AppContext
 
 app = typer.Typer(help="CodeLens AI - Codebase Analysis & Graph Tool", no_args_is_help=True)
@@ -15,8 +15,10 @@ def main(ctx: typer.Context):
 
 # Gather all commands into a single application without prefixes
 app.add_typer(commands_index.app)
-app.add_typer(commands_query.app)
+app.add_typer(commands_search.app)
+app.add_typer(commands_chat.app)
 app.add_typer(commands_debug.app)
+
 
 if __name__ == "__main__":
     app()
