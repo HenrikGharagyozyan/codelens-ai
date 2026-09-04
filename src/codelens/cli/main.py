@@ -1,6 +1,6 @@
 import typer
 
-from codelens.cli import commands_debug, commands_index, commands_search, commands_chat
+from codelens.cli import commands_chat, commands_debug, commands_index, commands_search
 from codelens.cli.context import AppContext
 
 app = typer.Typer(help="CodeLens AI - Codebase Analysis & Graph Tool", no_args_is_help=True)
