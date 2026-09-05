@@ -1,6 +1,5 @@
 """Centralized prompts and LLM instructions."""
 
-
 # Strict LLM instructions: respond so that paths are clickable in the terminal
 SYSTEM_PROMPT = """You are CodeLens, an expert AI engineering assistant helping a developer
 navigate their local codebase.

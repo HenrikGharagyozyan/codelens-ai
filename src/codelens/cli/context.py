@@ -1,4 +1,3 @@
-
 class AppContext:
     _db = None
     _vector_store = None

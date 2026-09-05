@@ -19,7 +19,7 @@ def _iter_text_parts(chunk):
         content = getattr(candidate, "content", None)
         if not content or not getattr(content, "parts", None):
             continue
-            
+
         for part in content.parts:
             text = getattr(part, "text", None)
             if text:
