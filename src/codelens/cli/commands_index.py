@@ -1,13 +1,12 @@
 from pathlib import Path
 
 import typer
-from rich.console import Console
 
+from codelens.console import console
 from codelens.indexer.runner import CodebaseIndexer
 from codelens.parser.python_parser import parse_python_file
 
 app = typer.Typer(help="Indexing and inspection commands")
-console = Console()
 
 
 @app.command()

@@ -1,10 +1,9 @@
 import typer
-from rich.console import Console
 
 from codelens.cli.context import AppContext
+from codelens.console import console
 
 app = typer.Typer(help="Debugging and graph visualization commands")
-console = Console()
 
 
 @app.command()

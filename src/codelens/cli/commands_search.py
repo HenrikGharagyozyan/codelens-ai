@@ -1,11 +1,10 @@
 import typer
-from rich.console import Console
 from rich.markdown import Markdown
 
 from codelens.cli.context import AppContext
+from codelens.console import console
 
 app = typer.Typer(help="Search and LLM query commands")
-console = Console()
 
 
 @app.command()
