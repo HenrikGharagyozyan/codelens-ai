@@ -4,6 +4,8 @@ import chromadb
 
 from codelens.indexer.chunker import Chunk
 
+COLLECTION_NAME = "code_chunks"
+
 
 class VectorStore:
     def __init__(self, db_path: str | Path = ".codelens_vector"):
@@ -11,13 +13,13 @@ class VectorStore:
         self.client = chromadb.PersistentClient(path=str(db_path))
         # HNSW with cosine similarity is the standard for text search
         self.collection = self.client.get_or_create_collection(
-            name="code_chunks", metadata={"hnsw:space": "cosine"}
+            name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
         )
 
     def clear(self):
         """Removes all vectors from ChromaDB without wiping the database directory."""
         try:
-            self.client.delete_collection(name="code_chunks")
+            self.client.delete_collection(name=COLLECTION_NAME)
         except Exception:
             pass
 
