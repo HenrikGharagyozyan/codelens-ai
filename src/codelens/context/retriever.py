@@ -1,6 +1,6 @@
 from codelens.indexer.vector_store import VectorStore
-from codelens.repository.db import DatabaseManager
 from codelens.llm.prompts import CONTEXT_PREAMBLE
+from codelens.repository.db import DatabaseManager
 
 
 class ContextRetriever:
