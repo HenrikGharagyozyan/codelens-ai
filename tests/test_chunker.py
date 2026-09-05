@@ -1,5 +1,7 @@
 """Tests for SemanticChunker: turning parsed symbols back into source slices."""
 
+from pathlib import Path
+
 import pytest
 
 from codelens.indexer.chunker import Chunk, SemanticChunker
@@ -207,3 +209,62 @@ class TestEmptyInput:
 
     def test_accepts_a_string_root(self, repo, parsed):
         assert SemanticChunker(str(repo)).create_chunks(parsed)
+
+
+class TestChunkerHelpers:
+    def test_group_by_file_keeps_symbol_order_within_a_file(self, tmp_path):
+        a1 = Function(name="a1", file_path="a.py", line_number=1)
+        b1 = Function(name="b1", file_path="b.py", line_number=1)
+        a2 = Function(name="a2", file_path="a.py", line_number=5)
+
+        grouped = SemanticChunker(tmp_path)._group_by_file([a1, b1, a2])
+
+        assert [s.name for s in grouped["a.py"]] == ["a1", "a2"]
+        assert [s.name for s in grouped["b.py"]] == ["b1"]
+
+    def test_group_by_file_on_no_symbols(self, tmp_path):
+        assert SemanticChunker(tmp_path)._group_by_file([]) == {}
+
+    def test_resolve_paths_joins_a_relative_path_to_the_root(self, tmp_path):
+        full, rel = SemanticChunker(tmp_path)._resolve_paths("src/app.py")
+
+        assert full == tmp_path / "src/app.py"
+        assert rel == "src/app.py"
+
+    def test_resolve_paths_relativises_an_absolute_path(self, tmp_path):
+        full, rel = SemanticChunker(tmp_path)._resolve_paths(str(tmp_path / "src/app.py"))
+
+        assert full == tmp_path / "src/app.py"
+        assert rel == "src/app.py"
+
+    def test_resolve_paths_keeps_the_name_for_a_path_outside_the_root(self, tmp_path):
+        full, rel = SemanticChunker(tmp_path / "root")._resolve_paths("/elsewhere/far.py")
+
+        assert full == Path("/elsewhere/far.py")
+        assert rel == "far.py"
+
+    def test_render_body_slices_the_declared_range(self, tmp_path):
+        lines = ["def f():\n", "    return 1\n", "x = 2\n"]
+        sym = Function(name="f", file_path="a.py", line_number=1, end_line_number=2)
+
+        content, end_idx = SemanticChunker(tmp_path)._render_body(sym, lines, 0)
+
+        assert content == "def f():\n    return 1"
+        assert end_idx == 2
+
+    def test_render_class_stops_at_the_first_method(self, tmp_path):
+        lines = ["class A:\n", "    x = 1\n", "    def m(self):\n", "        pass\n"]
+        cls = Class(
+            name="A",
+            file_path="a.py",
+            line_number=1,
+            end_line_number=4,
+            methods=[Function(name="m", file_path="a.py", line_number=3)],
+        )
+
+        content, end_idx = SemanticChunker(tmp_path)._render_class(cls, lines, 0)
+
+        assert "x = 1" in content
+        assert "def m" not in content
+        assert "# Methods: m" in content
+        assert end_idx == 2
