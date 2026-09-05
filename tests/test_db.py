@@ -276,11 +276,11 @@ class TestChunks:
 
 class TestChatHistory:
     def test_messages_come_back_in_chronological_order(self, db):
-        db.create_chat_session("s1", title="First chat")
-        db.add_chat_message("s1", "user", "hello")
-        db.add_chat_message("s1", "model", "hi there")
+        db.chat.create_session("s1", title="First chat")
+        db.chat.add_message("s1", "user", "hello")
+        db.chat.add_message("s1", "model", "hi there")
 
-        history = db.get_chat_history("s1")
+        history = db.chat.get_history("s1")
 
         assert [(row["role"], row["content"]) for row in history] == [
             ("user", "hello"),
@@ -288,30 +288,30 @@ class TestChatHistory:
         ]
 
     def test_history_is_scoped_to_one_session(self, db):
-        db.create_chat_session("s1")
-        db.create_chat_session("s2")
-        db.add_chat_message("s1", "user", "only mine")
+        db.chat.create_session("s1")
+        db.chat.create_session("s2")
+        db.chat.add_message("s1", "user", "only mine")
 
-        assert db.get_chat_history("s2") == []
+        assert db.chat.get_history("s2") == []
 
     def test_creating_a_session_stores_the_title(self, db):
-        db.create_chat_session("s1", title="Explain the retriever")
+        db.chat.create_session("s1", title="Explain the retriever")
 
-        assert db.get_recent_sessions()[0]["title"] == "Explain the retriever"
+        assert db.chat.get_recent_sessions()[0]["title"] == "Explain the retriever"
 
     def test_a_session_gets_a_default_title(self, db):
-        db.create_chat_session("s1")
+        db.chat.create_session("s1")
 
-        assert db.get_recent_sessions()[0]["title"] == "New Chat Session"
+        assert db.chat.get_recent_sessions()[0]["title"] == "New Chat Session"
 
     def test_recent_sessions_honour_the_limit(self, db):
         for i in range(8):
-            db.create_chat_session(f"s{i}")
+            db.chat.create_session(f"s{i}")
 
-        assert len(db.get_recent_sessions(limit=3)) == 3
+        assert len(db.chat.get_recent_sessions(limit=3)) == 3
 
     def test_recent_sessions_is_empty_for_a_fresh_database(self, db):
-        assert db.get_recent_sessions() == []
+        assert db.chat.get_recent_sessions() == []
 
 
 class TestClearAllIndexedData:
@@ -326,13 +326,13 @@ class TestClearAllIndexedData:
             assert count == 0, f"{table} was not cleared"
 
     def test_preserves_chat_history(self, populated_db):
-        populated_db.create_chat_session("s1")
-        populated_db.add_chat_message("s1", "user", "keep me")
+        populated_db.chat.create_session("s1")
+        populated_db.chat.add_message("s1", "user", "keep me")
 
         populated_db.clear_all_indexed_data()
 
-        assert len(populated_db.get_chat_history("s1")) == 1
-        assert len(populated_db.get_recent_sessions()) == 1
+        assert len(populated_db.chat.get_history("s1")) == 1
+        assert len(populated_db.chat.get_recent_sessions()) == 1
 
     def test_is_safe_to_run_on_an_empty_database(self, db):
         db.clear_all_indexed_data()
