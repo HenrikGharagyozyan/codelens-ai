@@ -1,13 +1,11 @@
-from rich.console import Console
 from rich.progress import track
 
+from codelens.console import console
 from codelens.indexer.chunker import SemanticChunker
 from codelens.indexer.vector_store import VectorStore
 from codelens.parser.python_parser import parse_python_file
 from codelens.repository.db import DatabaseManager
 from codelens.repository.scanner import RepositoryScanner
-
-console = Console()
 
 
 class CodebaseIndexer:
@@ -46,27 +44,23 @@ class CodebaseIndexer:
         return len(repo.files), symbols_count, self.db.db_path.absolute()
 
     def _index_file(self, f, root) -> list:
-        file_path = root / f.path
         rel_path = str(f.path)
-        classes, functions, imports = parse_python_file(file_path)
+
+        # The parser records the repository-relative path directly, so nothing
+        # downstream has to rewrite `file_path` afterwards.
+        classes, functions, imports = parse_python_file(root / f.path, record_as=rel_path)
 
         for imp in imports:
             self.db.insert_import(rel_path, imp.module, imp.name, imp.alias)
 
         file_symbols = []
 
-        # Force relative paths for all symbols and persist them
         for cls in classes:
-            cls.file_path = rel_path
-            for method in cls.methods:
-                method.file_path = rel_path
-
             self._persist_class(cls, rel_path)
             file_symbols.append(cls)
             file_symbols.extend(cls.methods)
 
         for func in functions:
-            func.file_path = rel_path
             self._persist_function(func, rel_path)
             file_symbols.append(func)
 
