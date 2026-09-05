@@ -1,17 +1,26 @@
 import sqlite3
 from pathlib import Path
 
+from codelens.config import DB_PATH
+from codelens.repository.chat import ChatRepository
 from codelens.repository.schema import SCHEMA_DDL
 
 
 class DatabaseManager:
-    def __init__(self, db_path: str | Path = ".codelens.db"):
+    """The code index: files, symbols, calls, imports, inheritance and chunks.
+
+    Chat history lives in the same file but is reached through `.chat`, since it
+    is the one thing here that re-indexing must not touch.
+    """
+
+    def __init__(self, db_path: str | Path = DB_PATH):
         self.db_path = Path(db_path)
         # Connect to the database file (if it doesn't exist, it will be created automatically)
         self.conn = sqlite3.connect(self.db_path)
         # This setting allows accessing columns by name: row['name']
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
+        self.chat = ChatRepository(self.conn)
 
     def _create_tables(self):
         """Creates tables if they do not yet exist."""
@@ -170,38 +179,6 @@ class DatabaseManager:
                     for c in chunks
                 ],
             )
-
-    def create_chat_session(self, session_id: str, title: str = "New Chat Session"):
-        with self.conn:
-            self.conn.execute(
-                "INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title)
-            )
-
-    def add_chat_message(self, session_id: str, role: str, content: str):
-        with self.conn:
-            self.conn.execute(
-                "INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)",
-                (session_id, role, content),
-            )
-
-    def get_chat_history(self, session_id: str) -> list[sqlite3.Row]:
-        """Returns the chat history for a specific session in chronological order."""
-        with self.conn:
-            cursor = self.conn.execute(
-                "SELECT role, content FROM chat_messages "
-                "WHERE session_id = ? ORDER BY created_at ASC",
-                (session_id,),
-            )
-            return cursor.fetchall()
-
-    def get_recent_sessions(self, limit: int = 5) -> list[sqlite3.Row]:
-        """Returns a list of recent chat sessions."""
-        with self.conn:
-            cursor = self.conn.execute(
-                "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?",
-                (limit,),
-            )
-            return cursor.fetchall()
 
     def clear_all_indexed_data(self):
         """Fully clears the old index data before a new scan (protects against duplicates)."""
