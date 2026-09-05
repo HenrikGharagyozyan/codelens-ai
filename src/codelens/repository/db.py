@@ -1,91 +1,32 @@
 import sqlite3
 from pathlib import Path
 
+from codelens.config import DB_PATH
+from codelens.repository.chat import ChatRepository
+from codelens.repository.schema import SCHEMA_DDL
+
 
 class DatabaseManager:
-    def __init__(self, db_path: str | Path = ".codelens.db"):
+    """The code index: files, symbols, calls, imports, inheritance and chunks.
+
+    Chat history lives in the same file but is reached through `.chat`, since it
+    is the one thing here that re-indexing must not touch.
+    """
+
+    def __init__(self, db_path: str | Path = DB_PATH):
         self.db_path = Path(db_path)
         # Connect to the database file (if it doesn't exist, it will be created automatically)
         self.conn = sqlite3.connect(self.db_path)
         # This setting allows accessing columns by name: row['name']
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
+        self.chat = ChatRepository(self.conn)
 
     def _create_tables(self):
         """Creates tables if they do not yet exist."""
         # The with block automatically commits the transaction if there are no errors
         with self.conn:
-            self.conn.executescript("""
-                CREATE TABLE IF NOT EXISTS files (
-                    path TEXT PRIMARY KEY,
-                    language TEXT NOT NULL,
-                    size INTEGER,
-                    lines INTEGER
-                );
-
-                CREATE TABLE IF NOT EXISTS symbols (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,  -- 'class' or 'function'
-                    file_path TEXT NOT NULL,
-                    line_number INTEGER,
-                    FOREIGN KEY (file_path) REFERENCES files(path)
-                );
-
-                CREATE TABLE IF NOT EXISTS calls (
-                    caller_id TEXT,
-                    callee_name TEXT,
-                    line_number INTEGER,
-                    FOREIGN KEY (caller_id) REFERENCES symbols(id)
-                );
-
-                CREATE TABLE IF NOT EXISTS chunks (
-                    chunk_id TEXT PRIMARY KEY,
-                    file_path TEXT,
-                    symbol_name TEXT,
-                    symbol_type TEXT,
-                    start_line INTEGER,
-                    end_line INTEGER,
-                    content TEXT
-                );
-
-
-                CREATE TABLE IF NOT EXISTS chat_sessions (
-                    id TEXT PRIMARY KEY,
-                    title TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                );
-
-                CREATE TABLE IF NOT EXISTS chat_messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT,
-                    role TEXT NOT NULL, -- 'user' or 'model'
-                    content TEXT NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
-                );
-
-                CREATE TABLE IF NOT EXISTS imports (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    file_path TEXT,
-                    module TEXT,
-                    name TEXT,
-                    alias TEXT,
-                    FOREIGN KEY (file_path) REFERENCES files(path)
-                );
-
-                CREATE TABLE IF NOT EXISTS inherits (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    class_id TEXT,
-                    base_name TEXT,
-                    FOREIGN KEY (class_id) REFERENCES symbols(id)
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id);
-                CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_name);
-                CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
-                CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON chunks(symbol_name);
-            """)
+            self.conn.executescript(SCHEMA_DDL)
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
         with self.conn:
@@ -238,38 +179,6 @@ class DatabaseManager:
                     for c in chunks
                 ],
             )
-
-    def create_chat_session(self, session_id: str, title: str = "New Chat Session"):
-        with self.conn:
-            self.conn.execute(
-                "INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title)
-            )
-
-    def add_chat_message(self, session_id: str, role: str, content: str):
-        with self.conn:
-            self.conn.execute(
-                "INSERT INTO chat_messages (session_id, role, content) VALUES (?, ?, ?)",
-                (session_id, role, content),
-            )
-
-    def get_chat_history(self, session_id: str) -> list[sqlite3.Row]:
-        """Returns the chat history for a specific session in chronological order."""
-        with self.conn:
-            cursor = self.conn.execute(
-                "SELECT role, content FROM chat_messages "
-                "WHERE session_id = ? ORDER BY created_at ASC",
-                (session_id,),
-            )
-            return cursor.fetchall()
-
-    def get_recent_sessions(self, limit: int = 5) -> list[sqlite3.Row]:
-        """Returns a list of recent chat sessions."""
-        with self.conn:
-            cursor = self.conn.execute(
-                "SELECT id, title, created_at FROM chat_sessions ORDER BY created_at DESC LIMIT ?",
-                (limit,),
-            )
-            return cursor.fetchall()
 
     def clear_all_indexed_data(self):
         """Fully clears the old index data before a new scan (protects against duplicates)."""

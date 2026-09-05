@@ -259,3 +259,22 @@ class TestParserResilience:
 
     def test_a_comment_only_file_yields_empty_results(self, parse_code):
         assert parse_code("# nothing to see here\n") == ([], [], [])
+
+    def test_record_as_overrides_the_path_stored_on_symbols(self, tmp_path):
+        """The indexer uses this so nothing has to rewrite `file_path` later."""
+        source = tmp_path / "sample.py"
+        source.write_text("class A:\n    def m(self):\n        pass\n\ndef f():\n    pass\n")
+
+        classes, functions, _ = parse_python_file(source, record_as="src/sample.py")
+
+        assert classes[0].file_path == "src/sample.py"
+        assert classes[0].methods[0].file_path == "src/sample.py"
+        assert functions[0].file_path == "src/sample.py"
+
+    def test_record_as_also_applies_to_imports(self, tmp_path):
+        source = tmp_path / "sample.py"
+        source.write_text("import os\n")
+
+        _, _, imports = parse_python_file(source, record_as="src/sample.py")
+
+        assert imports[0].file_path == "src/sample.py"

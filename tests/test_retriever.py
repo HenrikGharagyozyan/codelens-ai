@@ -242,3 +242,51 @@ class TestBuildContext:
         assert "### Chunk 1:" in context
         assert "### Chunk 2:" in context
         assert "\n---\n" in context
+
+
+class TestRenderHelpers:
+    def test_render_code_numbers_the_body_and_names_the_citation(self, retriever):
+        meta = {"symbol_name": "run", "file_path": "src/app.py", "start_line": 10, "end_line": 11}
+
+        header, body = retriever._render_code("def run():\n    pass", 1, meta)
+
+        assert "cite as src/app.py:10" in header
+        assert "10 | def run():" in body
+        assert "11 |     pass" in body
+
+    def test_render_code_refuses_to_number_an_unanchored_chunk(self, retriever):
+        meta = {"symbol_name": "run", "file_path": "src/app.py", "start_line": -1, "end_line": -1}
+
+        header, body = retriever._render_code("def run(): ...", 2, meta)
+
+        assert "line numbers unavailable" in header
+        assert "|" not in body
+
+    def test_nested_definitions_are_listed_with_exact_lines(self, retriever):
+        rendered = retriever._render_nested_definitions("src/app.py", 5, 18)
+
+        assert "`run` -> src/app.py:10" in rendered
+
+    def test_nested_definitions_returns_none_outside_any_range(self, retriever):
+        assert retriever._render_nested_definitions("src/app.py", 100, 200) is None
+
+    @pytest.mark.parametrize(
+        ("path", "start", "end"),
+        [(None, 1, 2), ("src/app.py", None, 2), ("src/app.py", 1, None)],
+    )
+    def test_nested_definitions_returns_none_without_an_anchor(self, retriever, path, start, end):
+        assert retriever._render_nested_definitions(path, start, end) is None
+
+    def test_call_graph_reports_callers_and_callees(self, retriever):
+        sections = retriever._render_call_graph("run", "src/app.py", 10, 14)
+        joined = "\n".join(sections)
+
+        assert "What `run` calls:" in joined
+        assert "`connect` (src/db.py:42)" in joined
+        assert "`print` (external, no location)" in joined
+
+    def test_call_graph_is_empty_for_an_isolated_symbol(self, populated_db):
+        populated_db.insert_symbol("src/lone.py::lone", "lone", "function", "src/lone.py", 1)
+        retriever = ContextRetriever(populated_db, FakeVectorStore())
+
+        assert retriever._render_call_graph("lone", "src/lone.py", 1, 3) == []

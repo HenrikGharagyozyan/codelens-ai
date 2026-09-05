@@ -10,6 +10,22 @@ from codelens.llm.prompts import SYSTEM_PROMPT
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
+def _iter_text_parts(chunk):
+    """Flattens the deeply nested object structure of a Gemini stream chunk."""
+    if not getattr(chunk, "candidates", None):
+        return
+
+    for candidate in chunk.candidates:
+        content = getattr(candidate, "content", None)
+        if not content or not getattr(content, "parts", None):
+            continue
+
+        for part in content.parts:
+            text = getattr(part, "text", None)
+            if text:
+                yield text
+
+
 class GeminiClient:
     def __init__(self):
         load_dotenv()
@@ -89,19 +105,7 @@ class GeminiClient:
         return self.client.chats.create(model=self.model_name, config=config, history=history)
 
     def send_chat_message_stream(self, chat_session, message: str):
-        """Sends a message and returns a generator for streaming output.
-
-        The caller prints the yielded fragments as they arrive, character by character.
-        """
+        """Sends a message and returns a generator for streaming output."""
         response_stream = chat_session.send_message_stream(message)
         for chunk in response_stream:
-            # Work around the `non-text parts` warning by reading only text parts manually.
-            if getattr(chunk, "candidates", None):
-                for candidate in chunk.candidates:
-                    if getattr(candidate, "content", None) and getattr(
-                        candidate.content, "parts", None
-                    ):
-                        for part in candidate.content.parts:
-                            # If a response part contains text, return it
-                            if getattr(part, "text", None):
-                                yield part.text
+            yield from _iter_text_parts(chunk)

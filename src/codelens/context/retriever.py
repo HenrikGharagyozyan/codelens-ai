@@ -98,54 +98,87 @@ class ContextRetriever:
 
     def _render_chunk(self, res: dict, idx: int) -> str:
         """Formats a single retrieved chunk and its call graph into Markdown."""
-        doc = res["document"]
         meta = res["metadata"]
+        symbol_name = meta.get("symbol_name")
+        file_path = meta.get("file_path")
+        start_line = meta.get("start_line")
+        end_line = meta.get("end_line")
 
+        block = list(self._render_code(res["document"], idx, meta))
+
+        # "global" is the pseudo-symbol for a file's module scope; it has no
+        # call graph of its own.
+        if symbol_name and symbol_name != "global":
+            block.extend(self._render_call_graph(symbol_name, file_path, start_line, end_line))
+
+        return "\n".join(block)
+
+    def _render_code(self, doc: str, idx: int, meta: dict) -> tuple[str, str]:
+        """Returns the (header, fenced code) pair for one chunk."""
         symbol_name = meta.get("symbol_name")
         file_path = meta.get("file_path")
         start_line = meta.get("start_line")
         end_line = meta.get("end_line")
 
         if start_line is None or start_line < 0:
-            body = f"```py\n{doc}\n```"
+            # Without a trustworthy anchor we must not print numbered lines.
             header = f"### Chunk {idx}: {symbol_name} (File: {file_path}, line numbers unavailable)"
-        else:
-            body = f"```py\n{self._number_lines(doc, start_line)}\n```"
-            header = (
-                f"### Chunk {idx}: {symbol_name} "
-                f"(File: {file_path}, lines {start_line}-{end_line}) "
-                f"-> cite as {file_path}:{start_line}"
-            )
+            return header, f"```py\n{doc}\n```"
 
-        block = [header, body]
+        header = (
+            f"### Chunk {idx}: {symbol_name} "
+            f"(File: {file_path}, lines {start_line}-{end_line}) "
+            f"-> cite as {file_path}:{start_line}"
+        )
+        return header, f"```py\n{self._number_lines(doc, start_line)}\n```"
 
-        if symbol_name and symbol_name != "global":
-            if file_path and start_line is not None and end_line is not None:
-                nested = [
-                    row
-                    for row in self.db.get_symbols_in_file(file_path)
-                    if start_line < row["line_number"] <= end_line
-                ]
-                if nested:
-                    listing = "; ".join(
-                        f"`{row['name']}` -> {file_path}:{row['line_number']}" for row in nested
-                    )
-                    block.append(f"**Definitions inside this chunk:** {listing}")
+    def _render_call_graph(
+        self, symbol_name: str, file_path: str | None, start_line: int | None, end_line: int | None
+    ) -> list[str]:
+        """Renders the verified neighbourhood of a symbol: nested defs, callers, callees."""
+        sections = []
 
-            incoming = self.db.get_incoming_calls(symbol_name)
-            if incoming:
-                callers = sorted(set(row["caller_name"] for row in incoming))
-                block.append(self._format_related(f"**What calls `{symbol_name}`:**", callers))
+        nested = self._render_nested_definitions(file_path, start_line, end_line)
+        if nested:
+            sections.append(nested)
 
-            sym_id = self._get_exact_symbol_id(symbol_name, file_path)
-            if sym_id:
-                outgoing = self.db.get_outgoing_calls(sym_id)
-                if outgoing:
-                    callees = sorted(set(row["callee_name"] for row in outgoing))
-                    block.append(self._format_related(f"**What `{symbol_name}` calls:**", callees))
+        incoming = self.db.get_incoming_calls(symbol_name)
+        if incoming:
+            callers = sorted(set(row["caller_name"] for row in incoming))
+            sections.append(self._format_related(f"**What calls `{symbol_name}`:**", callers))
 
-        return "\n".join(block)
-    
+        sym_id = self._get_exact_symbol_id(symbol_name, file_path)
+        if sym_id:
+            outgoing = self.db.get_outgoing_calls(sym_id)
+            if outgoing:
+                callees = sorted(set(row["callee_name"] for row in outgoing))
+                sections.append(self._format_related(f"**What `{symbol_name}` calls:**", callees))
+
+        return sections
+
+    def _render_nested_definitions(
+        self, file_path: str | None, start_line: int | None, end_line: int | None
+    ) -> str | None:
+        """Lists definitions living inside this chunk, with their exact lines.
+
+        Without this the model guesses where a method starts inside a class
+        chunk and lands one or two lines off.
+        """
+        if not file_path or start_line is None or end_line is None:
+            return None
+
+        nested = [
+            row
+            for row in self.db.get_symbols_in_file(file_path)
+            if start_line < row["line_number"] <= end_line
+        ]
+        if not nested:
+            return None
+
+        listing = "; ".join(
+            f"`{row['name']}` -> {file_path}:{row['line_number']}" for row in nested
+        )
+        return f"**Definitions inside this chunk:** {listing}"
 
     def build_context(self, query: str, limit: int = 4) -> str | None:
         """Build enriched context (code + call graph) for the LLM."""
