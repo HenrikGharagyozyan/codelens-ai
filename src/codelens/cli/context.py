@@ -1,7 +1,4 @@
-from dataclasses import dataclass
 
-
-@dataclass
 class AppContext:
     _db = None
     _vector_store = None
