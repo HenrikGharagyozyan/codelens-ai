@@ -2,14 +2,13 @@ import uuid
 from typing import Callable
 
 import typer
-from rich.console import Console
 from rich.prompt import IntPrompt, Prompt
 
 from codelens.cli.commands_search import _report_citations
 from codelens.cli.context import AppContext
+from codelens.console import console
 
 app = typer.Typer(help="Interactive chat commands")
-console = Console()
 
 
 def _make_search_tool(app_ctx: AppContext) -> Callable:
@@ -28,7 +27,7 @@ def _make_search_tool(app_ctx: AppContext) -> Callable:
 
 
 def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
-    recent_sessions = app_ctx.db.get_recent_sessions(limit=5)
+    recent_sessions = app_ctx.db.chat.get_recent_sessions(limit=5)
 
     if recent_sessions:
         console.print("\n[bold cyan]Recent chat sessions:[/bold cyan]")
@@ -46,7 +45,7 @@ def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
     if choice > 0:
         selected = recent_sessions[choice - 1]
         session_id = selected["id"]
-        history_rows = app_ctx.db.get_chat_history(session_id)
+        history_rows = app_ctx.db.chat.get_history(session_id)
         history_dicts = [{"role": row["role"], "content": row["content"]} for row in history_rows]
 
         console.print(f"\n[dim]Continuing session: {selected['title']}[/dim]\n")
@@ -59,7 +58,7 @@ def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
 def _chat_turn(app_ctx: AppContext, chat_session, session_id: str, question: str):
     console.print("\n[bold green]CodeLens:[/bold green]\n")
     try:
-        app_ctx.db.add_chat_message(session_id, "user", question)
+        app_ctx.db.chat.add_message(session_id, "user", question)
 
         full_response = ""
         for chunk in app_ctx.gemini.send_chat_message_stream(chat_session, question):
@@ -70,7 +69,7 @@ def _chat_turn(app_ctx: AppContext, chat_session, session_id: str, question: str
         repaired, checks = app_ctx.verifier.repair(full_response)
         _report_citations(checks)
 
-        app_ctx.db.add_chat_message(session_id, "model", repaired)
+        app_ctx.db.chat.add_message(session_id, "model", repaired)
 
     except Exception as e:
         console.print(f"\n[bold red]Error communicating with LLM:[/bold red] {e}")
@@ -114,7 +113,7 @@ def chat(ctx: typer.Context):
         # Create a session record in the database when the first message is sent
         if not session_created:
             title = question[:40] + ("..." if len(question) > 40 else "")
-            app_ctx.db.create_chat_session(session_id, title=title)
+            app_ctx.db.chat.create_session(session_id, title=title)
             session_created = True
 
         _chat_turn(app_ctx, chat_session, session_id, question)
