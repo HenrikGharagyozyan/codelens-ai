@@ -107,8 +107,15 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def parse_python_file(path: Path) -> tuple[list[Class], list[Function], list[Import]]:
-    """Reads the file, builds an AST and returns the found classes, functions, and imports."""
+def parse_python_file(
+    path: Path, record_as: str | None = None
+) -> tuple[list[Class], list[Function], list[Import]]:
+    """Reads the file, builds an AST and returns the found classes, functions, and imports.
+
+    `record_as` is the path stored on every returned symbol. The indexer passes
+    the repository-relative path so callers never have to rewrite `file_path`
+    after the fact; it defaults to the path that was read.
+    """
     try:
         code = path.read_text(encoding="utf-8")
     except Exception:
@@ -120,7 +127,7 @@ def parse_python_file(path: Path) -> tuple[list[Class], list[Function], list[Imp
     except SyntaxError:
         return [], [], []
 
-    visitor = PythonAstVisitor(str(path))
+    visitor = PythonAstVisitor(record_as if record_as is not None else str(path))
     visitor.visit(tree)
 
     return visitor.classes, visitor.functions, visitor.imports
