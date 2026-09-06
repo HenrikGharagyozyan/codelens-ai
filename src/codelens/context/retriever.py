@@ -8,14 +8,19 @@ class ContextRetriever:
         self.db = db
         self.vector_store = vector_store
 
-    def _get_exact_symbol_id(self, symbol_name: str, file_path: str):
-        """Helper method for finding the exact symbol ID."""
-        if not symbol_name or not file_path:
+    def _get_exact_symbol_id(self, symbol_name: str, file_path: str, start_line: int, end_line: int):
+        """Helper method for finding the exact symbol ID using physical file bounds."""
+        if not symbol_name or not file_path or start_line is None or end_line is None:
             return None
 
         with self.db.conn:
             cursor = self.db.conn.execute(
-                "SELECT id FROM symbols WHERE name = ? AND file_path = ?", (symbol_name, file_path)
+                """
+                SELECT id FROM symbols 
+                WHERE name = ? AND file_path = ? 
+                AND line_number >= ? AND line_number <= ?
+                """, 
+                (symbol_name, file_path, start_line, end_line)
             )
             row = cursor.fetchone()
             return row["id"] if row else None
@@ -147,7 +152,7 @@ class ContextRetriever:
             callers = sorted(set(row["caller_name"] for row in incoming))
             sections.append(self._format_related(f"**What calls `{symbol_name}`:**", callers))
 
-        sym_id = self._get_exact_symbol_id(symbol_name, file_path)
+        sym_id = self._get_exact_symbol_id(symbol_name, file_path, start_line, end_line)
         if sym_id:
             outgoing = self.db.get_outgoing_calls(sym_id)
             if outgoing:
@@ -159,11 +164,7 @@ class ContextRetriever:
     def _render_nested_definitions(
         self, file_path: str | None, start_line: int | None, end_line: int | None
     ) -> str | None:
-        """Lists definitions living inside this chunk, with their exact lines.
-
-        Without this the model guesses where a method starts inside a class
-        chunk and lands one or two lines off.
-        """
+        """Lists definitions living inside this chunk, with their exact lines."""
         if not file_path or start_line is None or end_line is None:
             return None
 
@@ -192,3 +193,4 @@ class ContextRetriever:
         final_context = "\n\n---\n\n".join(blocks)
 
         return f"{CONTEXT_PREAMBLE}{final_context}"
+    
