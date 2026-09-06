@@ -1,7 +1,8 @@
 import ast
+from dataclasses import dataclass, field
 from pathlib import Path
 
-from .models import Class, Function, Import
+from .models import Class, Function, Import, Module
 
 
 class PythonAstVisitor(ast.NodeVisitor):
@@ -142,10 +143,18 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def parse_python_file(
-    path: Path, record_as: str | None = None
-) -> tuple[list[Class], list[Function], list[Import]]:
-    """Reads the file, builds an AST and returns the found classes, functions, and imports.
+@dataclass
+class ParsedFile:
+    """Everything one file yielded: its module summary and its symbols."""
+
+    module: Module | None = None
+    classes: list[Class] = field(default_factory=list)
+    functions: list[Function] = field(default_factory=list)
+    imports: list[Import] = field(default_factory=list)
+
+
+def parse_file(path: Path, record_as: str | None = None) -> ParsedFile:
+    """Parses one Python file into a `ParsedFile`.
 
     `record_as` is the path stored on every returned symbol. The indexer passes
     the repository-relative path so callers never have to rewrite `file_path`
@@ -154,15 +163,43 @@ def parse_python_file(
     try:
         code = path.read_text(encoding="utf-8")
     except Exception:
-        return [], [], []
+        return ParsedFile()
 
     # Catch SyntaxError so broken files don't stop the whole indexer
     try:
         tree = ast.parse(code)
     except SyntaxError:
-        return [], [], []
+        return ParsedFile()
 
-    visitor = PythonAstVisitor(record_as if record_as is not None else str(path))
+    file_path = record_as if record_as is not None else str(path)
+    visitor = PythonAstVisitor(file_path)
     visitor.visit(tree)
 
-    return visitor.classes, visitor.functions, visitor.imports
+    module = Module(
+        name=Path(file_path).stem,
+        file_path=file_path,
+        line_number=1,
+        end_line_number=len(code.splitlines()) or 1,
+        docstring=ast.get_docstring(tree),
+        top_level_names=[cls.name for cls in visitor.classes]
+        + [func.name for func in visitor.functions],
+    )
+
+    return ParsedFile(
+        module=module,
+        classes=visitor.classes,
+        functions=visitor.functions,
+        imports=visitor.imports,
+    )
+
+
+def parse_python_file(
+    path: Path, record_as: str | None = None
+) -> tuple[list[Class], list[Function], list[Import]]:
+    """Reads the file, builds an AST and returns the found classes, functions, and imports.
+
+    Kept as the symbol-only view over `parse_file`, which callers that do not
+    need the module summary can keep using.
+    """
+    parsed = parse_file(path, record_as)
+    return parsed.classes, parsed.functions, parsed.imports
