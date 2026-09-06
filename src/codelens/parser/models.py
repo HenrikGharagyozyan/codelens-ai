@@ -26,6 +26,18 @@ class Function(Symbol):
 
 
 @dataclass
+class Module(Symbol):
+    """A file as a whole: its docstring and what it defines at the top level.
+
+    Indexed as its own chunk so a question about a file's *purpose* ("where are
+    the storage paths configured?") can match the module summary, rather than
+    having to match one of the constants inside it.
+    """
+
+    top_level_names: list[str] = field(default_factory=list)
+
+
+@dataclass
 class Class(Symbol):
     methods: list[Function] = field(default_factory=list)
     bases: list[str] = field(default_factory=list)  # base clases for inheritance
