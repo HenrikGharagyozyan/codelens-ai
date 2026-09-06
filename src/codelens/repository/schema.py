@@ -69,4 +69,31 @@ CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id);
 CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_name);
 CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
 CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON chunks(symbol_name);
+
+-- FTS5 Virtual Table for true hybrid search (BM25)
+CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+    content,
+    symbol_name,
+    file_path,
+    content='chunks',
+    content_rowid='rowid'
+);
+
+-- Triggers to keep FTS index synced with the chunks table automatically
+CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
+    INSERT INTO chunks_fts(rowid, content, symbol_name, file_path)
+    VALUES (new.rowid, new.content, new.symbol_name, new.file_path);
+END;
+
+CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content, symbol_name, file_path)
+    VALUES ('delete', old.rowid, old.content, old.symbol_name, old.file_path);
+END;
+
+CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
+    INSERT INTO chunks_fts(chunks_fts, rowid, content, symbol_name, file_path)
+    VALUES ('delete', old.rowid, old.content, old.symbol_name, old.file_path);
+    INSERT INTO chunks_fts(rowid, content, symbol_name, file_path)
+    VALUES (new.rowid, new.content, new.symbol_name, new.file_path);
+END;
 """
