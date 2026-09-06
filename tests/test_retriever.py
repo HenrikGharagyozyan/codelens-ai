@@ -76,14 +76,25 @@ class TestFormatRelated:
 
 class TestExactSymbolId:
     def test_resolves_a_name_and_file_to_its_id(self, retriever):
-        assert retriever._get_exact_symbol_id("run", "src/app.py") == "src/app.py::Service.run"
+        # Передаем широкий диапазон строк (1, 100), чтобы гарантированно охватить 
+        # номер строки, на котором зарегистрирован моковый символ в фикстуре базы.
+        assert retriever._get_exact_symbol_id("run", "src/app.py", 1, 100) == "src/app.py::Service.run"
 
     def test_returns_none_for_the_wrong_file(self, retriever):
-        assert retriever._get_exact_symbol_id("run", "src/db.py") is None
+        assert retriever._get_exact_symbol_id("run", "src/db.py", 1, 100) is None
 
-    @pytest.mark.parametrize(("name", "path"), [("", "src/app.py"), ("run", ""), (None, None)])
-    def test_returns_none_on_missing_input(self, retriever, name, path):
-        assert retriever._get_exact_symbol_id(name, path) is None
+    @pytest.mark.parametrize(
+        ("name", "path", "start_line", "end_line"), 
+        [
+            ("", "src/app.py", 1, 100), 
+            ("run", "", 1, 100), 
+            (None, None, 1, 100),
+            ("run", "src/app.py", None, 100),  # Проверка на отсутствие start_line
+            ("run", "src/app.py", 1, None),    # Проверка на отсутствие end_line
+        ]
+    )
+    def test_returns_none_on_missing_input(self, retriever, name, path, start_line, end_line):
+        assert retriever._get_exact_symbol_id(name, path, start_line, end_line) is None
 
 
 class TestHybridSearch:
