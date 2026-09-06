@@ -3,6 +3,7 @@ from pathlib import Path
 
 from codelens.config import DB_PATH
 from codelens.repository.chat import ChatRepository
+from codelens.repository.fts import build_match_query
 from codelens.repository.schema import SCHEMA_DDL
 
 
@@ -77,11 +78,14 @@ class DatabaseManager:
 
     def search_chunks_keyword(self, query: str, limit: int = 10) -> list[sqlite3.Row]:
         """Lexical search using SQLite FTS5 (BM25) for true relevance ranking."""
-        with self.conn:
-            # Escape quotes and wrap in quotes for a safe FTS5 phrase search.
-            # This prevents syntax errors from special characters like ()*. in code queries.
-            safe_query = f'"{query.replace('"', '""')}"'
+        # Quoting the whole query would make this an exact-phrase search, which
+        # matches nothing for a natural-language question. Split it into terms so
+        # BM25 can rank by term overlap and rarity.
+        match_query = build_match_query(query)
+        if match_query is None:
+            return []
 
+        with self.conn:
             cursor = self.conn.execute(
                 """
                 SELECT chunks.* 
@@ -91,7 +95,7 @@ class DatabaseManager:
                 ORDER BY bm25(chunks_fts) 
                 LIMIT ?
                 """,
-                (safe_query, limit),
+                (match_query, limit),
             )
             return cursor.fetchall()
 
