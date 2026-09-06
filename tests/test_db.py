@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import pytest
 
 from codelens.repository.db import DatabaseManager
+from codelens.repository.schema import SCHEMA_VERSION
 
 EXPECTED_TABLES = {
     "files",
@@ -338,3 +339,62 @@ class TestClearAllIndexedData:
         db.clear_all_indexed_data()
 
         assert db.conn.execute("SELECT COUNT(*) AS n FROM files").fetchone()["n"] == 0
+
+
+class TestSchemaMigration:
+    """A schema change must reach existing databases, not only brand-new ones.
+
+    Every statement in SCHEMA_DDL is `IF NOT EXISTS`, so without a version check
+    an already-created table keeps its old definition forever.
+    """
+
+    @staticmethod
+    def _legacy_database(path):
+        conn = sqlite3.connect(path)
+        conn.executescript(
+            """
+            CREATE TABLE chunks (
+                chunk_id TEXT PRIMARY KEY, file_path TEXT, symbol_name TEXT,
+                symbol_type TEXT, start_line INTEGER, end_line INTEGER, content TEXT
+            );
+            CREATE VIRTUAL TABLE chunks_fts USING fts5(
+                content, symbol_name, file_path, content='chunks', content_rowid='rowid'
+            );
+            CREATE TABLE chat_sessions (id TEXT PRIMARY KEY, title TEXT, created_at DATETIME);
+            INSERT INTO chat_sessions VALUES ('s1', 'earlier conversation', '2026-01-01');
+            PRAGMA user_version = 1;
+            """
+        )
+        conn.commit()
+        conn.close()
+
+    def test_stamps_the_current_version_on_a_new_database(self, db):
+        assert db.conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+
+    def test_rebuilds_index_tables_when_the_version_is_stale(self, tmp_path):
+        path = tmp_path / "legacy.db"
+        self._legacy_database(path)
+
+        manager = DatabaseManager(path)
+        try:
+            sql = manager.conn.execute(
+                "SELECT sql FROM sqlite_master WHERE name = 'chunks_fts'"
+            ).fetchone()[0]
+
+            assert "porter" in sql
+            assert manager.conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+        finally:
+            manager.close()
+
+    def test_an_upgrade_keeps_chat_history(self, tmp_path):
+        """Conversations are not index data and must survive a schema rebuild."""
+        path = tmp_path / "legacy.db"
+        self._legacy_database(path)
+
+        manager = DatabaseManager(path)
+        try:
+            rows = manager.conn.execute("SELECT title FROM chat_sessions").fetchall()
+
+            assert [row["title"] for row in rows] == ["earlier conversation"]
+        finally:
+            manager.close()
