@@ -71,31 +71,33 @@ class DatabaseManager:
         with self.conn:
             cursor = self.conn.execute(
                 "SELECT * FROM symbols WHERE name LIKE ? LIMIT 15",
-                (f"%{query}%",),  # % means any text before and after the query
+                (f"%{query}%",),
             )
             return cursor.fetchall()
 
     def search_chunks_keyword(self, query: str, limit: int = 10) -> list[sqlite3.Row]:
-        """Lexical search for chunks by keyword match in code content or symbol name."""
+        """Lexical search using SQLite FTS5 (BM25) for true relevance ranking."""
         with self.conn:
-            # We search for the query in file paths, symbol names, or the raw code content
+            # Escape quotes and wrap in quotes for a safe FTS5 phrase search.
+            # This prevents syntax errors from special characters like ()*. in code queries.
+            safe_query = f'"{query.replace('"', '""')}"'
+            
             cursor = self.conn.execute(
-                """SELECT * FROM chunks 
-                   WHERE content LIKE ? 
-                      OR symbol_name LIKE ? 
-                      OR file_path LIKE ? 
-                   LIMIT ?""",
-                (f"%{query}%", f"%{query}%", f"%{query}%", limit),
+                """
+                SELECT chunks.* 
+                FROM chunks 
+                JOIN chunks_fts ON chunks.rowid = chunks_fts.rowid
+                WHERE chunks_fts MATCH ? 
+                ORDER BY bm25(chunks_fts) 
+                LIMIT ?
+                """,
+                (safe_query, limit),
             )
             return cursor.fetchall()
 
     def get_symbol_locations(self, names: list[str]) -> dict[str, list[tuple[str, int]]]:
         """
         Resolves symbol names to their real (file_path, line_number) locations.
-
-        This is what keeps LLM citations honest: any symbol we merely *mention*
-        in the context (callers, callees) still gets a verified location, so the
-        model never has to guess a line number.
         """
         if not names:
             return {}
@@ -159,7 +161,8 @@ class DatabaseManager:
     def save_chunks(self, chunks: list) -> None:
         """Saves semantic code chunks to the database."""
         with self.conn:
-            self.conn.execute("DELETE FROM chunks")  # Clear stale chunks during reindexing
+            # Clearing chunks will automatically fire the AFTER DELETE trigger for FTS
+            self.conn.execute("DELETE FROM chunks")
             self.conn.executemany(
                 """
                 INSERT INTO chunks
@@ -181,11 +184,11 @@ class DatabaseManager:
             )
 
     def clear_all_indexed_data(self):
-        """Fully clears the old index data before a new scan (protects against duplicates)."""
+        """Fully clears the old index data before a new scan."""
         with self.conn:
             self.conn.execute("DELETE FROM calls")
             self.conn.execute("DELETE FROM symbols")
-            self.conn.execute("DELETE FROM chunks")
+            self.conn.execute("DELETE FROM chunks")  # Triggers sync with chunks_fts automatically
             self.conn.execute("DELETE FROM files")
             self.conn.execute("DELETE FROM imports")
             self.conn.execute("DELETE FROM inherits")
