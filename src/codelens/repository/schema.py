@@ -1,5 +1,29 @@
 """Database schema definition."""
 
+# Bump this whenever SCHEMA_DDL changes in a way that existing databases cannot
+# simply grow into. Every statement below is `IF NOT EXISTS`, so an already
+# created table is never altered -- without a version check, a schema change
+# would silently apply only to brand-new databases (this is exactly how a
+# tokenizer change to chunks_fts went unnoticed once).
+SCHEMA_VERSION = 2
+
+# Index tables, dropped and rebuilt on a version change. The chat tables are
+# deliberately absent: conversations must survive both re-indexing and upgrades.
+INDEX_OBJECTS = (
+    ("trigger", "chunks_ai"),
+    ("trigger", "chunks_ad"),
+    ("trigger", "chunks_au"),
+    ("table", "chunks_fts"),
+    ("table", "chunks"),
+    ("table", "inherits"),
+    ("table", "imports"),
+    ("table", "calls"),
+    ("table", "symbols"),
+    ("table", "files"),
+)
+
+DROP_INDEX_DDL = "\n".join(f"DROP {kind.upper()} IF EXISTS {name};" for kind, name in INDEX_OBJECTS)
+
 SCHEMA_DDL = """
 CREATE TABLE IF NOT EXISTS files (
     path TEXT PRIMARY KEY,
@@ -76,7 +100,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     symbol_name,
     file_path,
     content='chunks',
-    content_rowid='rowid'
+    content_rowid='rowid',
+    -- Porter stemming so a question's wording does not have to match the code's:
+    -- "paths"/"path", "configured"/"configures" and "parsing"/"parse" all unify.
+    tokenize='porter unicode61'
 );
 
 -- Triggers to keep FTS index synced with the chunks table automatically
