@@ -3,7 +3,7 @@ from rich.progress import track
 from codelens.console import console
 from codelens.indexer.chunker import SemanticChunker
 from codelens.indexer.vector_store import VectorStore
-from codelens.parser.python_parser import parse_python_file
+from codelens.parser.python_parser import parse_file
 from codelens.repository.db import DatabaseManager
 from codelens.repository.scanner import RepositoryScanner
 
@@ -48,19 +48,24 @@ class CodebaseIndexer:
 
         # The parser records the repository-relative path directly, so nothing
         # downstream has to rewrite `file_path` afterwards.
-        classes, functions, imports = parse_python_file(root / f.path, record_as=rel_path)
+        parsed = parse_file(root / f.path, record_as=rel_path)
 
-        for imp in imports:
+        for imp in parsed.imports:
             self.db.insert_import(rel_path, imp.module, imp.name, imp.alias)
 
         file_symbols = []
 
-        for cls in classes:
+        # The module summary is chunked but not stored as a symbol: it is a
+        # retrieval aid, not something the call graph should ever point at.
+        if parsed.module is not None:
+            file_symbols.append(parsed.module)
+
+        for cls in parsed.classes:
             self._persist_class(cls, rel_path)
             file_symbols.append(cls)
             file_symbols.extend(cls.methods)
 
-        for func in functions:
+        for func in parsed.functions:
             self._persist_function(func, rel_path)
             file_symbols.append(func)
 
