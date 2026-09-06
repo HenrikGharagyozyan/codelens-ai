@@ -70,6 +70,17 @@ class ContextRetriever:
                 }
             scores[chunk_id] = scores.get(chunk_id, 0.0) + (1.0 / (rrf_k + rank + 1))
 
+        # Apply Heuristics (Downweight tests unless queried explicitly)
+        query_lower = query.lower()
+        is_asking_for_tests = "test" in query_lower
+
+        for chunk_id in scores.keys():
+            file_path = chunks_data[chunk_id]["metadata"].get("file_path", "").lower()
+            
+            # If the query is not about tests, halve the score of test files
+            if not is_asking_for_tests and ("test_" in file_path or "/tests/" in file_path):
+                scores[chunk_id] *= 0.5
+                
         # Sort everything by final RRF score (highest to lowest)
         ranked_chunk_ids = sorted(scores.keys(), key=lambda cid: scores[cid], reverse=True)
 
