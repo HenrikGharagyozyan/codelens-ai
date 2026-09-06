@@ -106,6 +106,41 @@ class PythonAstVisitor(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
+    def visit_Assign(self, node: ast.Assign):
+        # Capture only global variables (not inside classes or functions)
+        if not self.current_class and not self.current_function:
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    # Use the Function model to preserve type consistency;
+                    # chunker.py will still extract this section correctly by line.
+                    var_symbol = Function(
+                        name=target.id,
+                        file_path=self.file_path,
+                        line_number=node.lineno,
+                        args=[],
+                        is_async=False,
+                        end_line_number=getattr(node, "end_lineno", node.lineno),
+                        docstring=None,
+                    )
+                    self.functions.append(var_symbol)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        # For annotated variables (for example, CONST: str = "...")
+        if not self.current_class and not self.current_function:
+            if isinstance(node.target, ast.Name):
+                var_symbol = Function(
+                    name=node.target.id,
+                    file_path=self.file_path,
+                    line_number=node.lineno,
+                    args=[],
+                    is_async=False,
+                    end_line_number=getattr(node, "end_lineno", node.lineno),
+                    docstring=None,
+                )
+                self.functions.append(var_symbol)
+        self.generic_visit(node)
+
 
 def parse_python_file(
     path: Path, record_as: str | None = None
