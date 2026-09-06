@@ -81,7 +81,7 @@ class DatabaseManager:
             # Escape quotes and wrap in quotes for a safe FTS5 phrase search.
             # This prevents syntax errors from special characters like ()*. in code queries.
             safe_query = f'"{query.replace('"', '""')}"'
-            
+
             cursor = self.conn.execute(
                 """
                 SELECT chunks.* 

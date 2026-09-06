@@ -8,7 +8,9 @@ class ContextRetriever:
         self.db = db
         self.vector_store = vector_store
 
-    def _get_exact_symbol_id(self, symbol_name: str, file_path: str, start_line: int, end_line: int):
+    def _get_exact_symbol_id(
+        self, symbol_name: str, file_path: str, start_line: int, end_line: int
+    ):
         """Helper method for finding the exact symbol ID using physical file bounds."""
         if not symbol_name or not file_path or start_line is None or end_line is None:
             return None
@@ -19,8 +21,8 @@ class ContextRetriever:
                 SELECT id FROM symbols 
                 WHERE name = ? AND file_path = ? 
                 AND line_number >= ? AND line_number <= ?
-                """, 
-                (symbol_name, file_path, start_line, end_line)
+                """,
+                (symbol_name, file_path, start_line, end_line),
             )
             row = cursor.fetchone()
             return row["id"] if row else None
@@ -193,4 +195,3 @@ class ContextRetriever:
         final_context = "\n\n---\n\n".join(blocks)
 
         return f"{CONTEXT_PREAMBLE}{final_context}"
-    
