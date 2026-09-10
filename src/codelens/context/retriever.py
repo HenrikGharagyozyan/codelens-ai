@@ -118,15 +118,15 @@ class ContextRetriever:
         """Formats a single retrieved chunk and its call graph into Markdown."""
         meta = res["metadata"]
         symbol_name = meta.get("symbol_name")
+        symbol_type = meta.get("symbol_type")
         file_path = meta.get("file_path")
         start_line = meta.get("start_line")
         end_line = meta.get("end_line")
 
         block = list(self._render_code(res["document"], idx, meta))
 
-        # "global" is the pseudo-symbol for a file's module scope; it has no
-        # call graph of its own.
-        if symbol_name and symbol_name != "global":
+        # Check by symbol_type instead of the fragile "global" string
+        if symbol_name and symbol_type != "module":
             block.extend(self._render_call_graph(symbol_name, file_path, start_line, end_line))
 
         return "\n".join(block)

@@ -10,8 +10,8 @@ from codelens.repository.schema import DROP_INDEX_DDL, SCHEMA_DDL, SCHEMA_VERSIO
 class DatabaseManager:
     """The code index: files, symbols, calls, imports, inheritance and chunks.
 
-    Chat history lives in the same file but is reached through `.chat`, since it
-    is the one thing here that re-indexing must not touch.
+        Chat history lives in the same file but is reached through `.chat`, since it
+        is the one thing here that re-indexing must not touch.
     """
 
     def __init__(self, db_path: str | Path = DB_PATH):
@@ -75,6 +75,37 @@ class DatabaseManager:
         with self.conn:
             self.conn.execute(
                 "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", (class_id, base_name)
+            )
+
+    # New batch insert methods for performance when indexing many symbols/files at once
+    def insert_files_batch(self, rows: list[tuple[str, str, int, int]]):
+        with self.conn:
+            self.conn.executemany(
+                "INSERT OR REPLACE INTO files (path, language, size, lines) VALUES (?, ?, ?, ?)", rows
+            )
+
+    def insert_symbols_batch(self, rows: list[tuple[str, str, str, str, int]]):
+        with self.conn:
+            self.conn.executemany(
+                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) VALUES (?, ?, ?, ?, ?)", rows
+            )
+
+    def insert_calls_batch(self, rows: list[tuple[str, str, int]]):
+        with self.conn:
+            self.conn.executemany(
+                "INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)", rows
+            )
+
+    def insert_imports_batch(self, rows: list[tuple[str, str | None, str, str | None]]):
+        with self.conn:
+            self.conn.executemany(
+                "INSERT INTO imports (file_path, module, name, alias) VALUES (?, ?, ?, ?)", rows
+            )
+
+    def insert_inherits_batch(self, rows: list[tuple[str, str]]):
+        with self.conn:
+            self.conn.executemany(
+                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", rows
             )
 
     def search_symbols(self, query: str) -> list[sqlite3.Row]:

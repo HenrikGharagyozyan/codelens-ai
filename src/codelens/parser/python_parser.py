@@ -58,11 +58,15 @@ class PythonAstVisitor(ast.NodeVisitor):
             docstring=ast.get_docstring(node),
         )
 
-        # Inside a class the function is a method; otherwise it is a global function
-        if self.current_class:
-            self.current_class.methods.append(func)
-        else:
-            self.functions.append(func)
+        # Check if we are already inside a function (prevents nested helpers from escaping)
+        is_nested = self.current_function is not None
+
+        if not is_nested:
+            # Inside a class the function is a method; otherwise it is a global function
+            if self.current_class:
+                self.current_class.methods.append(func)
+            else:
+                self.functions.append(func)
 
         # SAVE CONTEXT before diving inside the function
         previous_function = self.current_function
