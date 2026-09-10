@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pathspec
@@ -27,33 +28,39 @@ class RepositoryScanner:
         """Scans the directory and returns a Repository object."""
         files = []
 
-        # rglob("*") recursively finds all files and directories
-        for file_path in self.root.rglob("*"):
-            if not file_path.is_file():
-                continue
+        # os.walk allows us to modify 'dirs' in-place to prevent descending into ignored folders
+        for root, dirs, filenames in os.walk(self.root):
+            root_path = Path(root)
 
-            # Get the path relative to the project root for the gitignore check
-            rel_path = file_path.relative_to(self.root)
+            # Filter directories in-place. We append '/' to match dir-specific gitignore rules.
+            dirs[:] = [
+                d for d in dirs
+                if not self.ignore_spec.match_file((root_path / d).relative_to(self.root).as_posix() + "/")
+            ]
 
-            # as_posix() replaces \ with / (important for pathspec on Windows)
-            if self.ignore_spec.match_file(rel_path.as_posix()):
-                continue
+            for file_name in filenames:
+                file_path = root_path / file_name
+                rel_path = file_path.relative_to(self.root)
 
-            try:
-                # Try to count the lines.
-                # If the file is binary, a UnicodeDecodeError is raised
-                with open(file_path, "r", encoding="utf-8") as f:
-                    lines_count = sum(1 for _ in f)
+                # Skip files that match the ignore rules
+                if self.ignore_spec.match_file(rel_path.as_posix()):
+                    continue
 
-                # Get the file extension without the dot (for example, 'py')
-                ext = file_path.suffix.lstrip(".") or "unknown"
-                stat = file_path.stat()
+                try:
+                    # Try to count the lines.
+                    # If the file is binary, a UnicodeDecodeError is raised
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        lines_count = sum(1 for _ in f)
 
-                files.append(
-                    File(path=rel_path, language=ext, size=stat.st_size, lines=lines_count)
-                )
-            except UnicodeDecodeError:
-                # Skip binary files
-                pass
+                    # Get the file extension without the dot (for example, 'py')
+                    ext = file_path.suffix.lstrip(".") or "unknown"
+                    stat = file_path.stat()
+
+                    files.append(
+                        File(path=rel_path, language=ext, size=stat.st_size, lines=lines_count)
+                    )
+                except UnicodeDecodeError:
+                    # Skip binary files
+                    pass
 
         return Repository(root=self.root, files=files)
