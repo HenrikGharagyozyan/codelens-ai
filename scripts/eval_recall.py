@@ -84,7 +84,9 @@ def evaluate(search_fn, dataset: list[dict], depth: int) -> dict:
                 hits[k] += 1
         reciprocal_ranks.append(1.0 / rank if rank else 0.0)
 
-        per_query.append({"query": item["query"], "expected": expected, "rank": rank, "files": files})
+        per_query.append(
+            {"query": item["query"], "expected": expected, "rank": rank, "files": files}
+        )
 
     total = len(dataset)
     return {
