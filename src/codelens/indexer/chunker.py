@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from codelens.parser.models import Class, Function, Symbol
+from codelens.parser.models import Class, Function, Module, Symbol
 
 
 @dataclass
@@ -68,7 +68,10 @@ class SemanticChunker:
         # Indexing in the Python AST starts at 1, while arrays start at 0
         start_idx = sym.line_number - 1
 
-        if isinstance(sym, Class):
+        if isinstance(sym, Module):
+            content, end_idx = self._render_module(sym, lines)
+            sym_type = "module"
+        elif isinstance(sym, Class):
             content, end_idx = self._render_class(sym, lines, start_idx)
             sym_type = "class"
         else:
@@ -84,6 +87,24 @@ class SemanticChunker:
             content=content,
             symbol_type=sym_type,
         )
+
+    @staticmethod
+    def _render_module(sym: Module, lines: list[str]) -> tuple[str, int]:
+        """Renders a file as a summary: its path, docstring and top-level names.
+
+        A file's purpose usually lives in its module docstring, which no symbol
+        chunk covers. Without this, "where are the storage paths configured?"
+        can only match the constants themselves, which carry almost no text.
+        """
+        parts = [f"# Module: {sym.file_path}"]
+
+        if sym.docstring:
+            parts.append(sym.docstring.strip())
+
+        if sym.top_level_names:
+            parts.append(f"# Defines: {', '.join(sym.top_level_names)}")
+
+        return "\n".join(parts), sym.end_line_number or len(lines)
 
     def _render_class(self, sym: Class, lines: list[str], start_idx: int) -> tuple[str, int]:
         """Renders a class as a skeleton: its header, docstring and method names.

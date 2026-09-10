@@ -160,9 +160,31 @@ class TestRelationships:
 class TestChunkingAndVectors:
     def test_chunks_are_persisted_for_every_symbol(self, indexed):
         indexer, _ = indexed
-        rows = indexer.db.conn.execute("SELECT symbol_name FROM chunks").fetchall()
+        rows = indexer.db.conn.execute(
+            "SELECT symbol_name FROM chunks WHERE symbol_type != 'module'"
+        ).fetchall()
 
         assert {row["symbol_name"] for row in rows} == {"Base", "Service", "run", "main", "connect"}
+
+    def test_every_python_file_also_gets_a_module_chunk(self, indexed):
+        """The module summary carries the file docstring, which no symbol chunk covers."""
+        indexer, _ = indexed
+        rows = indexer.db.conn.execute(
+            "SELECT file_path, content FROM chunks WHERE symbol_type = 'module'"
+        ).fetchall()
+
+        by_path = {row["file_path"]: row["content"] for row in rows}
+
+        assert set(by_path) == {"app.py", "db.py"}
+        assert "Application entry point." in by_path["app.py"]
+        assert "# Defines: Base, Service, main" in by_path["app.py"]
+
+    def test_a_module_chunk_is_not_stored_as_a_symbol(self, indexed):
+        """Module summaries are a retrieval aid; the call graph must not see them."""
+        indexer, _ = indexed
+        rows = indexer.db.conn.execute("SELECT name FROM symbols").fetchall()
+
+        assert "app" not in {row["name"] for row in rows}
 
     def test_the_same_chunks_are_sent_to_the_vector_store(self, indexed, fake_store):
         indexer, _ = indexed

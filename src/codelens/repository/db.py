@@ -3,7 +3,8 @@ from pathlib import Path
 
 from codelens.config import DB_PATH
 from codelens.repository.chat import ChatRepository
-from codelens.repository.schema import SCHEMA_DDL
+from codelens.repository.fts import build_match_query
+from codelens.repository.schema import DROP_INDEX_DDL, SCHEMA_DDL, SCHEMA_VERSION
 
 
 class DatabaseManager:
@@ -23,10 +24,20 @@ class DatabaseManager:
         self.chat = ChatRepository(self.conn)
 
     def _create_tables(self):
-        """Creates tables if they do not yet exist."""
+        """Creates the schema, rebuilding the index tables after a version bump."""
+        current = self.conn.execute("PRAGMA user_version").fetchone()[0]
+
+        # The DDL is all `IF NOT EXISTS`, so an existing table would keep its old
+        # definition forever. On a version change we drop the index tables and
+        # let them be recreated; chat history is not among them and survives.
+        if current and current != SCHEMA_VERSION:
+            with self.conn:
+                self.conn.executescript(DROP_INDEX_DDL)
+
         # The with block automatically commits the transaction if there are no errors
         with self.conn:
             self.conn.executescript(SCHEMA_DDL)
+            self.conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def insert_file(self, path: str, language: str, size: int, lines: int):
         with self.conn:
@@ -77,11 +88,14 @@ class DatabaseManager:
 
     def search_chunks_keyword(self, query: str, limit: int = 10) -> list[sqlite3.Row]:
         """Lexical search using SQLite FTS5 (BM25) for true relevance ranking."""
-        with self.conn:
-            # Escape quotes and wrap in quotes for a safe FTS5 phrase search.
-            # This prevents syntax errors from special characters like ()*. in code queries.
-            safe_query = f'"{query.replace('"', '""')}"'
+        # Quoting the whole query would make this an exact-phrase search, which
+        # matches nothing for a natural-language question. Split it into terms so
+        # BM25 can rank by term overlap and rarity.
+        match_query = build_match_query(query)
+        if match_query is None:
+            return []
 
+        with self.conn:
             cursor = self.conn.execute(
                 """
                 SELECT chunks.* 
@@ -91,7 +105,7 @@ class DatabaseManager:
                 ORDER BY bm25(chunks_fts) 
                 LIMIT ?
                 """,
-                (safe_query, limit),
+                (match_query, limit),
             )
             return cursor.fetchall()
 

@@ -1,0 +1,65 @@
+{
+  "_comment": "Ground truth for retrieval evaluation. Kept as JSON, not Python, so the queries never enter the indexed corpus -- a .py file here would be chunked and would then win every lexical match against itself.",
+  "queries": [
+    {
+      "query": "Where is the FTS5 virtual table created and kept in sync?",
+      "expected_file": "src/codelens/repository/schema.py"
+    },
+    {
+      "query": "How does the system combine vector and lexical search using reciprocal rank fusion?",
+      "expected_file": "src/codelens/context/retriever.py"
+    },
+    {
+      "query": "Turning a natural language question into an FTS5 MATCH expression",
+      "expected_file": "src/codelens/repository/fts.py"
+    },
+    {
+      "query": "How is the AST parser extracting classes and functions?",
+      "expected_file": "src/codelens/parser/python_parser.py"
+    },
+    {
+      "query": "System instruction preamble sent to the language model",
+      "expected_file": "src/codelens/llm/prompts.py"
+    },
+    {
+      "query": "Where are wrong line numbers in an answer corrected?",
+      "expected_file": "src/codelens/context/citations.py"
+    },
+    {
+      "query": "Walking the directory tree while honouring gitignore rules",
+      "expected_file": "src/codelens/repository/scanner.py"
+    },
+    {
+      "query": "Splitting source code into semantic chunks on AST boundaries",
+      "expected_file": "src/codelens/indexer/chunker.py"
+    },
+    {
+      "query": "Storing embeddings and querying them by cosine similarity",
+      "expected_file": "src/codelens/indexer/vector_store.py"
+    },
+    {
+      "query": "Saving and resuming conversation history across sessions",
+      "expected_file": "src/codelens/repository/chat.py"
+    },
+    {
+      "query": "Orchestrating the full indexing run over every file",
+      "expected_file": "src/codelens/indexer/runner.py"
+    },
+    {
+      "query": "Which functions call a given symbol?",
+      "expected_file": "src/codelens/repository/db.py"
+    },
+    {
+      "query": "Lazily constructing shared dependencies for CLI commands",
+      "expected_file": "src/codelens/cli/context.py"
+    },
+    {
+      "query": "Sending a streaming chat message with tool calling",
+      "expected_file": "src/codelens/llm/gemini.py"
+    },
+    {
+      "query": "Where are the database and vector store paths configured?",
+      "expected_file": "src/codelens/config.py"
+    }
+  ]
+}

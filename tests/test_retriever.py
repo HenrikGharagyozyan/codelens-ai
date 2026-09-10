@@ -76,8 +76,8 @@ class TestFormatRelated:
 
 class TestExactSymbolId:
     def test_resolves_a_name_and_file_to_its_id(self, retriever):
-        # Передаем широкий диапазон строк (1, 100), чтобы гарантированно охватить
-        # номер строки, на котором зарегистрирован моковый символ в фикстуре базы.
+        # Pass a wide line range (1, 100) to reliably cover
+        # the line where the mock symbol is registered in the database fixture.
         assert (
             retriever._get_exact_symbol_id("run", "src/app.py", 1, 100) == "src/app.py::Service.run"
         )
@@ -91,8 +91,8 @@ class TestExactSymbolId:
             ("", "src/app.py", 1, 100),
             ("run", "", 1, 100),
             (None, None, 1, 100),
-            ("run", "src/app.py", None, 100),  # Проверка на отсутствие start_line
-            ("run", "src/app.py", 1, None),  # Проверка на отсутствие end_line
+            ("run", "src/app.py", None, 100),  # Check for a missing start_line
+            ("run", "src/app.py", 1, None),  # Check for a missing end_line
         ],
     )
     def test_returns_none_on_missing_input(self, retriever, name, path, start_line, end_line):
