@@ -16,9 +16,7 @@ class ChatRepository:
 
     def create_session(self, session_id: str, title: str = "New Chat Session"):
         with self.conn:
-            self.conn.execute(
-                "INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title)
-            )
+            self.conn.execute("INSERT INTO chat_sessions (id, title) VALUES (?, ?)", (session_id, title))
 
     def add_message(self, session_id: str, role: str, content: str):
         with self.conn:
@@ -31,8 +29,7 @@ class ChatRepository:
         """Returns the chat history for a specific session in chronological order."""
         with self.conn:
             cursor = self.conn.execute(
-                "SELECT role, content FROM chat_messages "
-                "WHERE session_id = ? ORDER BY created_at ASC",
+                "SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC",
                 (session_id,),
             )
             return cursor.fetchall()

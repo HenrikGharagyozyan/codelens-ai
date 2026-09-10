@@ -7,9 +7,7 @@ app = typer.Typer(help="Debugging and graph visualization commands")
 
 
 @app.command()
-def graph(
-    ctx: typer.Context, symbol: str = typer.Argument(..., help="Symbol name to build graph for")
-):
+def graph(ctx: typer.Context, symbol: str = typer.Argument(..., help="Symbol name to build graph for")):
     """Show the dependency graph for a specific symbol."""
     app_ctx: AppContext = ctx.obj
 
@@ -32,9 +30,7 @@ def graph(
 
     sym_id = target["id"]
 
-    console.print(
-        f"[bold magenta]Dependency Graph for:[/bold magenta] {target['name']} ({sym_id})\n"
-    )
+    console.print(f"[bold magenta]Dependency Graph for:[/bold magenta] {target['name']} ({sym_id})\n")
 
     # Get all calls made by this function
     calls = app_ctx.db.get_outgoing_calls(sym_id)
@@ -63,9 +59,6 @@ def inspect_chunks(ctx: typer.Context, limit: int = 3):
         return
 
     for row in chunks:
-        console.print(
-            f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} "
-            f"(Lines: {row['start_line']}-{row['end_line']})"
-        )
+        console.print(f"[bold cyan]Chunk:[/bold cyan] {row['chunk_id']} (Lines: {row['start_line']}-{row['end_line']})")
         console.print(f"```python\n{row['content']}\n```\n")
         console.print("-" * 50)

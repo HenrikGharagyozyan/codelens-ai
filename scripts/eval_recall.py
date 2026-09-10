@@ -59,10 +59,7 @@ class Retrievers:
 
     def keyword(self, query: str, limit: int) -> list[dict]:
         rows = self.db.search_chunks_keyword(query, limit=limit)
-        return [
-            {"metadata": {"file_path": row["file_path"], "symbol_name": row["symbol_name"]}}
-            for row in rows
-        ]
+        return [{"metadata": {"file_path": row["file_path"], "symbol_name": row["symbol_name"]}} for row in rows]
 
     def hybrid(self, query: str, limit: int) -> list[dict]:
         return self.retriever._hybrid_search(query, limit=limit)
@@ -84,9 +81,7 @@ def evaluate(search_fn, dataset: list[dict], depth: int) -> dict:
                 hits[k] += 1
         reciprocal_ranks.append(1.0 / rank if rank else 0.0)
 
-        per_query.append(
-            {"query": item["query"], "expected": expected, "rank": rank, "files": files}
-        )
+        per_query.append({"query": item["query"], "expected": expected, "rank": rank, "files": files})
 
     total = len(dataset)
     return {

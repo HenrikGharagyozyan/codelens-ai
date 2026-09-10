@@ -34,7 +34,8 @@ class RepositoryScanner:
 
             # Filter directories in-place. We append '/' to match dir-specific gitignore rules.
             dirs[:] = [
-                d for d in dirs
+                d
+                for d in dirs
                 if not self.ignore_spec.match_file((root_path / d).relative_to(self.root).as_posix() + "/")
             ]
 
@@ -56,9 +57,7 @@ class RepositoryScanner:
                     ext = file_path.suffix.lstrip(".") or "unknown"
                     stat = file_path.stat()
 
-                    files.append(
-                        File(path=rel_path, language=ext, size=stat.st_size, lines=lines_count)
-                    )
+                    files.append(File(path=rel_path, language=ext, size=stat.st_size, lines=lines_count))
                 except UnicodeDecodeError:
                     # Skip binary files
                     pass

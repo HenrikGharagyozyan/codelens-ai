@@ -62,9 +62,7 @@ class GeminiClient:
         User's question: {question}
         """
 
-        response = self.client.models.generate_content(
-            model=self.model_name, contents=prompt, config=self.config
-        )
+        response = self.client.models.generate_content(model=self.model_name, contents=prompt, config=self.config)
 
         return response.text
 
@@ -78,9 +76,7 @@ class GeminiClient:
         response = chat_session.send_message(message)
         return response.text
 
-    def start_chat_with_tools(
-        self, search_tool_fn: Callable[[str], str], history_dicts: list[dict] = None
-    ):
+    def start_chat_with_tools(self, search_tool_fn: Callable[[str], str], history_dicts: list[dict] = None):
         """
         Creates a chat session with a connected code-search tool.
         `search_tool_fn` is a Python function that Gemini can call itself.
@@ -96,11 +92,7 @@ class GeminiClient:
         if history_dicts:
             history = []
             for msg in history_dicts:
-                history.append(
-                    types.Content(
-                        role=msg["role"], parts=[types.Part.from_text(text=msg["content"])]
-                    )
-                )
+                history.append(types.Content(role=msg["role"], parts=[types.Part.from_text(text=msg["content"])]))
 
         return self.client.chats.create(model=self.model_name, config=config, history=history)
 

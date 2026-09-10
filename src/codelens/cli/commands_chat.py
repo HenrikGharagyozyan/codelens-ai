@@ -17,9 +17,7 @@ def _make_search_tool(app_ctx: AppContext) -> Callable:
         Searches the repository using vector embeddings and AST graph relationships.
         Use this tool whenever you need to look up code implementation, functions, or architecture.
         """
-        with console.status(
-            f"[bold cyan]🔍 Gemini requested codebase search for: '{query}'...", spinner="dots"
-        ):
+        with console.status(f"[bold cyan]🔍 Gemini requested codebase search for: '{query}'...", spinner="dots"):
             context = app_ctx.retriever.build_context(query, limit=4)
             return context if context else "No relevant code found."
 
@@ -32,15 +30,11 @@ def _select_session(app_ctx: AppContext) -> tuple[str, list[dict] | None, bool]:
     if recent_sessions:
         console.print("\n[bold cyan]Recent chat sessions:[/bold cyan]")
         for idx, sess in enumerate(recent_sessions, 1):
-            console.print(
-                f"  {idx}. [bold]{sess['title']}[/bold] [dim]({sess['created_at']})[/dim]"
-            )
+            console.print(f"  {idx}. [bold]{sess['title']}[/bold] [dim]({sess['created_at']})[/dim]")
         console.print("  0. [bold green]Start a NEW session[/bold green]")
 
     valid_choices = [str(i) for i in range(len(recent_sessions) + 1)]
-    choice = IntPrompt.ask(
-        "\nSelect a session to continue (or 0 for new)", choices=valid_choices, default=0
-    )
+    choice = IntPrompt.ask("\nSelect a session to continue (or 0 for new)", choices=valid_choices, default=0)
 
     if choice > 0:
         selected = recent_sessions[choice - 1]
@@ -84,17 +78,13 @@ def chat(ctx: typer.Context):
     search_tool = _make_search_tool(app_ctx)
 
     try:
-        chat_session = app_ctx.gemini.start_chat_with_tools(
-            search_tool, history_dicts=history_dicts
-        )
+        chat_session = app_ctx.gemini.start_chat_with_tools(search_tool, history_dicts=history_dicts)
     except Exception as e:
         console.print(f"[bold red]Error initializing Gemini client:[/bold red] {e}")
         return
 
     console.print("[bold green]🤖 Welcome to CodeLens Interactive Chat![/bold green]")
-    console.print(
-        "[dim]Ask questions about the codebase. Type 'exit' or 'quit' to end the session.\n[/dim]"
-    )
+    console.print("[dim]Ask questions about the codebase. Type 'exit' or 'quit' to end the session.\n[/dim]")
 
     while True:
         try:
