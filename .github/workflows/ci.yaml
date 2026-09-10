@@ -2,13 +2,13 @@ name: CI Checks
 
 on:
   push:
-    branches: [ "main", "feature/**" ]
+    branches: [ "main", "feature/**", "feat/**", "fix/**" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
   test-and-lint:
-    runs-on: ubuntu-latest
+	runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -24,6 +24,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --dev
+
+      - name: Run Ruff Format Check
+        run: uv run ruff format --check .
 
       - name: Run Ruff Linter
         run: uv run ruff check .
