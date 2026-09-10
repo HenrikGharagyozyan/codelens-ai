@@ -93,9 +93,7 @@ class PythonAstVisitor(ast.NodeVisitor):
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
-            self.imports.append(
-                Import(file_path=self.file_path, module=None, name=alias.name, alias=alias.asname)
-            )
+            self.imports.append(Import(file_path=self.file_path, module=None, name=alias.name, alias=alias.asname))
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
@@ -185,8 +183,7 @@ def parse_file(path: Path, record_as: str | None = None) -> ParsedFile:
         line_number=1,
         end_line_number=len(code.splitlines()) or 1,
         docstring=ast.get_docstring(tree),
-        top_level_names=[cls.name for cls in visitor.classes]
-        + [func.name for func in visitor.functions],
+        top_level_names=[cls.name for cls in visitor.classes] + [func.name for func in visitor.functions],
     )
 
     return ParsedFile(
@@ -197,9 +194,7 @@ def parse_file(path: Path, record_as: str | None = None) -> ParsedFile:
     )
 
 
-def parse_python_file(
-    path: Path, record_as: str | None = None
-) -> tuple[list[Class], list[Function], list[Import]]:
+def parse_python_file(path: Path, record_as: str | None = None) -> tuple[list[Class], list[Function], list[Import]]:
     """Reads the file, builds an AST and returns the found classes, functions, and imports.
 
     Kept as the symbol-only view over `parse_file`, which callers that do not

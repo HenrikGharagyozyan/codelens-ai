@@ -10,8 +10,8 @@ from codelens.repository.schema import DROP_INDEX_DDL, SCHEMA_DDL, SCHEMA_VERSIO
 class DatabaseManager:
     """The code index: files, symbols, calls, imports, inheritance and chunks.
 
-        Chat history lives in the same file but is reached through `.chat`, since it
-        is the one thing here that re-indexing must not touch.
+    Chat history lives in the same file but is reached through `.chat`, since it
+    is the one thing here that re-indexing must not touch.
     """
 
     def __init__(self, db_path: str | Path = DB_PATH):
@@ -47,13 +47,10 @@ class DatabaseManager:
                 (path, language, size, lines),
             )
 
-    def insert_symbol(
-        self, symbol_id: str, name: str, sym_type: str, file_path: str, line_number: int
-    ):
+    def insert_symbol(self, symbol_id: str, name: str, sym_type: str, file_path: str, line_number: int):
         with self.conn:
             self.conn.execute(
-                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO symbols (id, name, type, file_path, line_number) VALUES (?, ?, ?, ?, ?)",
                 (symbol_id, name, sym_type, file_path, line_number),
             )
 
@@ -73,9 +70,7 @@ class DatabaseManager:
 
     def insert_inherit(self, class_id: str, base_name: str):
         with self.conn:
-            self.conn.execute(
-                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", (class_id, base_name)
-            )
+            self.conn.execute("INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", (class_id, base_name))
 
     # New batch insert methods for performance when indexing many symbols/files at once
     def insert_files_batch(self, rows: list[tuple[str, str, int, int]]):
@@ -92,21 +87,15 @@ class DatabaseManager:
 
     def insert_calls_batch(self, rows: list[tuple[str, str, int]]):
         with self.conn:
-            self.conn.executemany(
-                "INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)", rows
-            )
+            self.conn.executemany("INSERT INTO calls (caller_id, callee_name, line_number) VALUES (?, ?, ?)", rows)
 
     def insert_imports_batch(self, rows: list[tuple[str, str | None, str, str | None]]):
         with self.conn:
-            self.conn.executemany(
-                "INSERT INTO imports (file_path, module, name, alias) VALUES (?, ?, ?, ?)", rows
-            )
+            self.conn.executemany("INSERT INTO imports (file_path, module, name, alias) VALUES (?, ?, ?, ?)", rows)
 
     def insert_inherits_batch(self, rows: list[tuple[str, str]]):
         with self.conn:
-            self.conn.executemany(
-                "INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", rows
-            )
+            self.conn.executemany("INSERT INTO inherits (class_id, base_name) VALUES (?, ?)", rows)
 
     def search_symbols(self, query: str) -> list[sqlite3.Row]:
         """Searches for symbols by partial name match."""
@@ -170,17 +159,13 @@ class DatabaseManager:
     def get_symbols_in_file(self, file_path: str) -> list[sqlite3.Row]:
         """Returns every symbol defined in a file, ordered by line number."""
         with self.conn:
-            cursor = self.conn.execute(
-                "SELECT * FROM symbols WHERE file_path = ? ORDER BY line_number", (file_path,)
-            )
+            cursor = self.conn.execute("SELECT * FROM symbols WHERE file_path = ? ORDER BY line_number", (file_path,))
             return cursor.fetchall()
 
     def get_outgoing_calls(self, symbol_id: str) -> list[sqlite3.Row]:
         """Returns a list of all functions called by the specified symbol."""
         with self.conn:
-            cursor = self.conn.execute(
-                "SELECT callee_name, line_number FROM calls WHERE caller_id = ?", (symbol_id,)
-            )
+            cursor = self.conn.execute("SELECT callee_name, line_number FROM calls WHERE caller_id = ?", (symbol_id,))
             return cursor.fetchall()
 
     def get_incoming_calls(self, callee_name: str) -> list[sqlite3.Row]:

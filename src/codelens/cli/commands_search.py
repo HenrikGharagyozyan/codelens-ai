@@ -29,9 +29,7 @@ def search(ctx: typer.Context, query: str = typer.Argument(..., help="Symbol nam
 
 
 @app.command(name="search-semantic")
-def search_semantic(
-    ctx: typer.Context, query: str = typer.Argument(..., help="Query to search by meaning")
-):
+def search_semantic(ctx: typer.Context, query: str = typer.Argument(..., help="Query to search by meaning")):
     """Search the codebase by semantic meaning using Embeddings."""
     app_ctx = ctx.obj
 
@@ -64,9 +62,7 @@ def ask(
     """Ask the LLM a question about the indexed codebase using RAG with Call Graph."""
     app_ctx: AppContext = ctx.obj
 
-    with console.status(
-        "[bold cyan]Searching codebase and building graph context...", spinner="dots"
-    ):
+    with console.status("[bold cyan]Searching codebase and building graph context...", spinner="dots"):
         # The retriever now searches vectors and loads relationships from SQLite itself
         context = app_ctx.retriever.build_context(question, limit=5)
 

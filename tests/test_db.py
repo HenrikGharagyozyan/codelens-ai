@@ -228,9 +228,7 @@ class TestCallGraph:
 
 class TestChunks:
     def test_save_chunks_persists_every_field(self, db):
-        db.save_chunks(
-            [ChunkStub("a.py::run:1", "a.py", "run", "function", 1, 4, "def run(): ...")]
-        )
+        db.save_chunks([ChunkStub("a.py::run:1", "a.py", "run", "function", 1, 4, "def run(): ...")])
         row = db.conn.execute("SELECT * FROM chunks").fetchone()
 
         assert row["chunk_id"] == "a.py::run:1"
@@ -265,12 +263,7 @@ class TestChunks:
         assert populated_db.search_chunks_keyword("kubernetes") == []
 
     def test_keyword_search_honours_the_limit(self, db):
-        db.save_chunks(
-            [
-                ChunkStub(f"c{i}", "a.py", f"handler_{i}", "function", i, i + 1, "body")
-                for i in range(10)
-            ]
-        )
+        db.save_chunks([ChunkStub(f"c{i}", "a.py", f"handler_{i}", "function", i, i + 1, "body") for i in range(10)])
 
         assert len(db.search_chunks_keyword("handler", limit=3)) == 3
 
@@ -377,9 +370,7 @@ class TestSchemaMigration:
 
         manager = DatabaseManager(path)
         try:
-            sql = manager.conn.execute(
-                "SELECT sql FROM sqlite_master WHERE name = 'chunks_fts'"
-            ).fetchone()[0]
+            sql = manager.conn.execute("SELECT sql FROM sqlite_master WHERE name = 'chunks_fts'").fetchone()[0]
 
             assert "porter" in sql
             assert manager.conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION

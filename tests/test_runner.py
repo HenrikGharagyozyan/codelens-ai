@@ -143,9 +143,7 @@ class TestRelationships:
         indexer, _ = indexed
         rows = indexer.db.conn.execute("SELECT * FROM imports").fetchall()
 
-        assert [(row["file_path"], row["module"], row["name"]) for row in rows] == [
-            ("app.py", "db", "connect")
-        ]
+        assert [(row["file_path"], row["module"], row["name"]) for row in rows] == [("app.py", "db", "connect")]
 
     def test_inheritance_edges_are_recorded(self, indexed):
         """Regression: the runner used to call a method the database never had."""
@@ -160,18 +158,14 @@ class TestRelationships:
 class TestChunkingAndVectors:
     def test_chunks_are_persisted_for_every_symbol(self, indexed):
         indexer, _ = indexed
-        rows = indexer.db.conn.execute(
-            "SELECT symbol_name FROM chunks WHERE symbol_type != 'module'"
-        ).fetchall()
+        rows = indexer.db.conn.execute("SELECT symbol_name FROM chunks WHERE symbol_type != 'module'").fetchall()
 
         assert {row["symbol_name"] for row in rows} == {"Base", "Service", "run", "main", "connect"}
 
     def test_every_python_file_also_gets_a_module_chunk(self, indexed):
         """The module summary carries the file docstring, which no symbol chunk covers."""
         indexer, _ = indexed
-        rows = indexer.db.conn.execute(
-            "SELECT file_path, content FROM chunks WHERE symbol_type = 'module'"
-        ).fetchall()
+        rows = indexer.db.conn.execute("SELECT file_path, content FROM chunks WHERE symbol_type = 'module'").fetchall()
 
         by_path = {row["file_path"]: row["content"] for row in rows}
 

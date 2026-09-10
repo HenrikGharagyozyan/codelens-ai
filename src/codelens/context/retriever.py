@@ -8,9 +8,7 @@ class ContextRetriever:
         self.db = db
         self.vector_store = vector_store
 
-    def _get_exact_symbol_id(
-        self, symbol_name: str, file_path: str, start_line: int, end_line: int
-    ):
+    def _get_exact_symbol_id(self, symbol_name: str, file_path: str, start_line: int, end_line: int):
         """Helper method for finding the exact symbol ID using physical file bounds."""
         if not symbol_name or not file_path or start_line is None or end_line is None:
             return None
@@ -91,9 +89,7 @@ class ContextRetriever:
         """Prefixes every source line with its real line number in the file."""
         lines = code.split("\n")
         width = len(str(start_line + len(lines) - 1))
-        return "\n".join(
-            f"{start_line + offset:>{width}} | {line}" for offset, line in enumerate(lines)
-        )
+        return "\n".join(f"{start_line + offset:>{width}} | {line}" for offset, line in enumerate(lines))
 
     def _format_related(self, label: str, names: list[str]) -> str:
         """Renders call-graph neighbours with their verified file:line locations."""
@@ -181,17 +177,11 @@ class ContextRetriever:
         if not file_path or start_line is None or end_line is None:
             return None
 
-        nested = [
-            row
-            for row in self.db.get_symbols_in_file(file_path)
-            if start_line < row["line_number"] <= end_line
-        ]
+        nested = [row for row in self.db.get_symbols_in_file(file_path) if start_line < row["line_number"] <= end_line]
         if not nested:
             return None
 
-        listing = "; ".join(
-            f"`{row['name']}` -> {file_path}:{row['line_number']}" for row in nested
-        )
+        listing = "; ".join(f"`{row['name']}` -> {file_path}:{row['line_number']}" for row in nested)
         return f"**Definitions inside this chunk:** {listing}"
 
     def build_context(self, query: str, limit: int = 4) -> str | None:

@@ -58,9 +58,7 @@ class TestFormatRelated:
         assert ":" not in rendered.replace("**calls:**", "")
 
     def test_all_definitions_of_an_ambiguous_name_are_listed(self, populated_db):
-        populated_db.insert_symbol(
-            "src/other.py::connect", "connect", "function", "src/other.py", 7
-        )
+        populated_db.insert_symbol("src/other.py::connect", "connect", "function", "src/other.py", 7)
         retriever = ContextRetriever(populated_db, FakeVectorStore())
 
         rendered = retriever._format_related("**calls:**", ["connect"])
@@ -69,18 +67,14 @@ class TestFormatRelated:
         assert "src/other.py:7" in rendered
 
     def test_the_label_is_kept_verbatim(self, retriever):
-        assert retriever._format_related("**What calls `run`:**", ["connect"]).startswith(
-            "**What calls `run`:**"
-        )
+        assert retriever._format_related("**What calls `run`:**", ["connect"]).startswith("**What calls `run`:**")
 
 
 class TestExactSymbolId:
     def test_resolves_a_name_and_file_to_its_id(self, retriever):
         # Pass a wide line range (1, 100) to reliably cover
         # the line where the mock symbol is registered in the database fixture.
-        assert (
-            retriever._get_exact_symbol_id("run", "src/app.py", 1, 100) == "src/app.py::Service.run"
-        )
+        assert retriever._get_exact_symbol_id("run", "src/app.py", 1, 100) == "src/app.py::Service.run"
 
     def test_returns_none_for_the_wrong_file(self, retriever):
         assert retriever._get_exact_symbol_id("run", "src/db.py", 1, 100) is None

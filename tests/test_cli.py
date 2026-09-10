@@ -126,12 +126,7 @@ class TestInspect:
     def test_prints_classes_methods_and_functions(self, runner, cli, tmp_path):
         source = tmp_path / "sample.py"
         source.write_text(
-            "class Service(Base):\n"
-            "    def run(self, x):\n"
-            "        pass\n"
-            "\n"
-            "def helper(a):\n"
-            "    pass\n",
+            "class Service(Base):\n    def run(self, x):\n        pass\n\ndef helper(a):\n    pass\n",
             encoding="utf-8",
         )
 

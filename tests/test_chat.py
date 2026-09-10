@@ -85,9 +85,7 @@ def answers(monkeypatch):
     """Scripts the interactive prompts; returns the list to fill in per test."""
     script = {"session": 0, "questions": []}
 
-    monkeypatch.setattr(
-        commands_chat.IntPrompt, "ask", staticmethod(lambda *a, **kw: script["session"])
-    )
+    monkeypatch.setattr(commands_chat.IntPrompt, "ask", staticmethod(lambda *a, **kw: script["session"]))
 
     def next_question(*a, **kw):
         if not script["questions"]:

@@ -172,11 +172,7 @@ class TestRepair:
         assert repaired == answer
 
     def test_handles_several_citations_in_one_answer(self, verifier):
-        answer = (
-            "`connect` is at src/db.py:137, "
-            "`run` is at src/app.py:10, "
-            "and `Service` is at src/app.py:5."
-        )
+        answer = "`connect` is at src/db.py:137, `run` is at src/app.py:10, and `Service` is at src/app.py:5."
 
         repaired, checks = verifier.repair(answer)
 
