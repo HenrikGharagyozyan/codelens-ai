@@ -349,3 +349,66 @@ class TestAppContext:
 
         assert ctx.verifier.db is ctx.db
         ctx.db.close()
+
+
+class TestGraphTree:
+    @pytest.fixture
+    def resolved(self, cli):
+        db = cli.db
+        db.insert_symbol("src/main.py::main", "main", "function", "src/main.py", 1)
+        db.insert_call("src/main.py::main", "run", 2, callee_id="src/app.py::Service.run", resolution="typed")
+        db.conn.execute(
+            "UPDATE calls SET callee_id = 'src/db.py::connect', resolution = 'import' "
+            "WHERE caller_id = 'src/app.py::Service.run' AND callee_name = 'connect'"
+        )
+        db.conn.commit()
+        return cli
+
+    def test_callers_are_followed_to_the_requested_depth(self, runner, resolved):
+        shallow = runner.invoke(app, ["graph", "connect", "--direction", "callers", "--depth", "1"])
+        deep = runner.invoke(app, ["graph", "connect", "--direction", "callers", "--depth", "2"])
+
+        assert "run" in shallow.stdout
+        assert "main" not in shallow.stdout
+        assert "main" in deep.stdout
+
+    def test_direction_callees_hides_callers(self, runner, resolved):
+        result = runner.invoke(app, ["graph", "run", "--direction", "callees"])
+
+        assert "Calls" in result.stdout
+        assert "Called by" not in result.stdout
+
+    def test_unresolved_same_name_callers_are_marked_as_guesses(self, runner, cli):
+        result = runner.invoke(app, ["graph", "connect", "--direction", "callers"])
+
+        assert "name match only" in result.stdout
+
+    def test_other_matches_are_mentioned(self, runner, cli):
+        cli.db.insert_symbol("src/other.py::connect", "connect", "function", "src/other.py", 3)
+
+        result = runner.invoke(app, ["graph", "connect"])
+
+        assert "1 other match(es)" in result.stdout
+
+    def test_an_invalid_direction_is_rejected(self, runner, cli):
+        result = runner.invoke(app, ["graph", "run", "--direction", "sideways"])
+
+        assert result.exit_code != 0
+
+
+class TestIndexReportsCallResolution:
+    def test_prints_the_share_of_resolved_calls(self, runner, cli, monkeypatch, tmp_path):
+        from collections import Counter
+
+        class FakeIndexer:
+            def __init__(self, path):
+                self.call_stats = Counter({"import": 3, "typed": 3, "builtin": 2, "unresolved": 2})
+
+            def run(self):
+                return 1, 1, tmp_path / ".codelens.db"
+
+        monkeypatch.setattr(commands_index, "CodebaseIndexer", FakeIndexer)
+
+        result = runner.invoke(app, ["index", str(tmp_path)])
+
+        assert "Call sites: 10 (60% resolved" in result.stdout
