@@ -1,5 +1,6 @@
 """Tests for DatabaseManager: schema, inserts, queries and index resets."""
 
+import json
 import sqlite3
 from dataclasses import dataclass
 
@@ -389,3 +390,89 @@ class TestSchemaMigration:
             assert [row["title"] for row in rows] == ["earlier conversation"]
         finally:
             manager.close()
+
+
+class TestGraphQueries:
+    @pytest.fixture
+    def graph_db(self, db):
+        db.insert_symbol(
+            "a.py::Service.run",
+            "run",
+            "method",
+            "a.py",
+            10,
+            qualname="Service.run",
+            end_line=14,
+            signature="def run(self)",
+            decorators=["staticmethod"],
+            parent_id="a.py::Service",
+        )
+        db.insert_symbol("a.py::main", "main", "function", "a.py", 20)
+        db.insert_symbol("b.py::run", "run", "function", "b.py", 1)
+        db.insert_symbol("tests/test_a.py::run", "run", "function", "tests/test_a.py", 1)
+        db.insert_call("a.py::main", "run", 21, receiver="Service()", callee_id="a.py::Service.run", resolution="typed")
+        db.insert_call("a.py::main", "run", 22, receiver="x", resolution="unresolved")
+        db.insert_call("a.py::main", "len", 23, resolution="builtin")
+        return db
+
+    def test_new_symbol_columns_are_stored(self, graph_db):
+        row = graph_db.get_symbol("a.py::Service.run")
+
+        assert row["qualname"] == "Service.run"
+        assert row["end_line"] == 14
+        assert row["signature"] == "def run(self)"
+        assert json.loads(row["decorators"]) == ["staticmethod"]
+        assert row["parent_id"] == "a.py::Service"
+
+    def test_qualname_defaults_to_the_name(self, graph_db):
+        assert graph_db.get_symbol("a.py::main")["qualname"] == "main"
+
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [
+            ("a.py::Service.run", "a.py::Service.run"),
+            ("Service.run", "a.py::Service.run"),
+            ("main", "a.py::main"),
+            ("mai", "a.py::main"),
+        ],
+    )
+    def test_find_symbols_tries_id_then_qualname_then_name_then_substring(self, graph_db, query, expected):
+        assert graph_db.find_symbols(query)[0]["id"] == expected
+
+    def test_find_symbols_puts_tests_last(self, graph_db):
+        ids = [row["id"] for row in graph_db.find_symbols("run")]
+
+        assert ids[-1] == "tests/test_a.py::run"
+
+    def test_get_callers_follows_resolved_edges_only(self, graph_db):
+        rows = graph_db.get_callers("a.py::Service.run")
+
+        assert [(r["caller_qualname"], r["line_number"]) for r in rows] == [("main", 21)]
+
+    def test_get_callees_joins_the_resolved_target(self, graph_db):
+        rows = graph_db.get_callees("a.py::main")
+
+        assert [(r["callee_name"], r["callee_qualname"], r["resolution"]) for r in rows] == [
+            ("run", "Service.run", "typed"),
+            ("run", None, "unresolved"),
+            ("len", None, "builtin"),
+        ]
+
+    def test_name_matched_callers_exclude_resolved_and_builtin_calls(self, graph_db):
+        rows = graph_db.get_name_matched_callers("run")
+
+        assert [r["line_number"] for r in rows] == [22]
+
+    def test_resolution_counts(self, graph_db):
+        assert graph_db.get_call_resolution_counts() == {"typed": 1, "unresolved": 1, "builtin": 1}
+
+    def test_get_chunk_at_skips_module_summaries(self, db):
+        db.save_chunks(
+            [
+                ChunkStub("a.py::a:1", "a.py", "a", "module", 1, 30, "# Module"),
+                ChunkStub("a.py::f:1", "a.py", "f", "function", 1, 3, "def f(): ..."),
+            ]
+        )
+
+        assert db.get_chunk_at("a.py", 1)["chunk_id"] == "a.py::f:1"
+        assert db.get_chunk_at("a.py", 99) is None
