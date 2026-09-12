@@ -78,8 +78,8 @@ def process_data():
 
         calls = fn.calls
         assert len(calls) == 2
-        assert calls[0] == ("first_call", 3)
-        assert calls[1] == ("second_call", 5)
+        assert calls[0] == ("first_call", 3, None)
+        assert calls[1] == ("second_call", 5, None)
 
     def test_async_functions_and_methods(self, parse_code):
         code = """
@@ -184,7 +184,7 @@ from typing import List, Optional as Opt
     def test_records_method_calls_by_attribute_name(self, parse_code):
         _, functions, _ = parse_code("def f():\n    obj.method()\n")
 
-        assert functions[0].calls == [("method", 2)]
+        assert functions[0].calls == [("method", 2, "obj")]
 
     def test_calls_are_attributed_to_the_innermost_function(self, parse_code):
         code = """
@@ -202,7 +202,7 @@ def outer():
         # The nested 'inner' function should not be exposed as a top-level symbol.
         assert "inner" not in by_name
         # Its calls should be attributed to the parent function in AST traversal order.
-        assert by_name["outer"].calls == [("outer_call", 3), ("inner_call", 6), ("after_inner", 8)]
+        assert by_name["outer"].calls == [("outer_call", 3, None), ("inner_call", 6, None), ("after_inner", 8, None)]
 
     def test_module_level_calls_are_not_attributed_to_any_function(self, parse_code):
         _, functions, _ = parse_code("print('hi')\n\ndef f():\n    pass\n")
@@ -280,3 +280,140 @@ class TestParserResilience:
         _, _, imports = parse_python_file(source, record_as="src/sample.py")
 
         assert imports[0].file_path == "src/sample.py"
+
+
+class TestGraphMetadata:
+    """What the parser records for the call graph: receivers, names, signatures and types."""
+
+    @pytest.fixture
+    def parse_full(self, tmp_path):
+        from codelens.parser.python_parser import parse_file
+
+        def _parse(code: str):
+            path = tmp_path / "sample.py"
+            path.write_text(code, encoding="utf-8")
+            return parse_file(path)
+
+        return _parse
+
+    def test_calls_record_what_they_were_made_on(self, parse_full):
+        code = """
+class A(Base):
+    def m(self, db: Database):
+        self.save()
+        self.db.query()
+        Service().run()
+        super().m()
+        items[0].pop()
+        db.close()
+        ", ".join([])
+"""
+        method = parse_full(code).classes[0].methods[0]
+        calls = {(c.name, c.receiver) for c in method.calls}
+
+        assert {
+            ("save", "self"),
+            ("query", "self.db"),
+            ("Service", None),
+            ("run", "Service()"),
+            ("m", "super()"),
+            ("pop", "<expr>"),
+            ("close", "db"),
+            ("join", "str()"),
+        } <= calls
+
+    def test_nested_classes_get_qualified_names(self, parse_full):
+        code = "class Outer:\n    class Inner:\n        def go(self):\n            pass\n"
+        classes = {c.name: c for c in parse_full(code).classes}
+
+        assert classes["Inner"].qualname == "Outer.Inner"
+        assert classes["Inner"].methods[0].qualname == "Outer.Inner.go"
+
+    def test_signature_decorators_and_return_annotation(self, parse_full):
+        code = "class A:\n    @property\n    def v(self) -> int:\n        return 1\n"
+        method = parse_full(code).classes[0].methods[0]
+
+        assert method.signature == "def v(self) -> int"
+        assert method.decorators == ["property"]
+        assert method.returns == "int"
+
+    def test_class_signature_keeps_bases_and_keywords(self, parse_full):
+        cls = parse_full("class A(Base, metaclass=Meta):\n    pass\n").classes[0]
+
+        assert cls.signature == "class A(Base, metaclass=Meta)"
+        assert cls.base_refs == ["Base"]
+
+    def test_every_kind_of_parameter_is_listed(self, parse_full):
+        func = parse_full("def f(a, /, b, *args, c, **kwargs):\n    pass\n").functions[0]
+
+        assert func.args == ["a", "b", "*args", "c", "**kwargs"]
+
+    def test_parameter_annotations_become_local_types(self, parse_full):
+        code = "def f(a: Db, b: Optional[Db], c: 'Db', d: Db | None, e, f: list[Db]):\n    pass\n"
+        local_types = parse_full(code).functions[0].local_types
+
+        assert local_types == {"a": "Db", "b": "Db", "c": "Db", "d": "Db", "e": None, "f": "list"}
+
+    def test_self_is_not_a_local(self, parse_full):
+        method = parse_full("class A:\n    def m(self, x: Db):\n        pass\n").classes[0].methods[0]
+
+        assert "self" not in method.local_types
+
+    def test_locals_built_by_constructors_and_loop_variables(self, parse_full):
+        code = (
+            "def f(rows):\n"
+            "    db = Database()\n"
+            "    for row in rows:\n"
+            "        pass\n"
+            "    with open(p) as fh:\n"
+            "        pass\n"
+        )
+        local_types = parse_full(code).functions[0].local_types
+
+        assert local_types["db"] == "Database()"
+        assert local_types["row"] is None
+        assert local_types["fh"] is None
+
+    def test_self_attribute_types_follow_the_parameter_annotation(self, parse_full):
+        code = """
+class Service:
+    root: Path
+
+    def __init__(self, db: Database | None = None):
+        self.db = db if db is not None else Database()
+        self.cache = Cache()
+"""
+        attr_types = parse_full(code).classes[0].attr_types
+
+        assert attr_types == {"root": "Path", "db": "Database", "cache": "Cache()"}
+
+    def test_return_type_is_inferred_when_not_annotated(self, parse_full):
+        parsed = parse_full("def make():\n    return Service()\n\ndef typed() -> Db:\n    return Service()\n")
+        by_name = {f.name: f for f in parsed.functions}
+
+        assert by_name["make"].return_type == "Service()"
+        assert by_name["typed"].return_type == "Db"
+
+    def test_module_level_names_are_variables_not_functions(self, parse_full):
+        parsed = parse_full("DB_PATH = '.db'\nconsole = Console()\n\ndef f():\n    pass\n")
+
+        assert [f.name for f in parsed.functions] == ["f"]
+        assert {v.name: v.value_type for v in parsed.variables} == {"DB_PATH": "str()", "console": "Console()"}
+        assert parsed.module.top_level_names == ["DB_PATH", "console", "f"]
+
+    def test_relative_import_level_is_recorded(self, parse_full):
+        imports = parse_full("from ..pkg import x\nfrom . import y\nimport z\n").imports
+
+        assert [(i.module, i.name, i.level) for i in imports] == [("pkg", "x", 2), ("", "y", 1), (None, "z", 0)]
+
+    def test_decorator_calls_are_not_calls_made_by_the_function(self, parse_full):
+        func = parse_full("@app.command()\ndef f():\n    pass\n").functions[0]
+
+        assert func.calls == []
+
+    def test_a_class_inside_a_function_is_local(self, parse_full):
+        code = "def factory():\n    class Local:\n        def run(self):\n            helper()\n    return Local\n"
+        parsed = parse_full(code)
+
+        assert parsed.classes == []
+        assert [c.name for c in parsed.functions[0].calls] == ["helper"]
