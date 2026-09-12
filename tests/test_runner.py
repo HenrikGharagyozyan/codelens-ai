@@ -288,3 +288,57 @@ class TestBatchWrites:
         indexer.db.close()
 
         assert paths == {"app.py", "db.py", "notes.md"}
+
+
+class TestCallResolution:
+    def test_an_imported_function_is_linked_by_id(self, indexed):
+        indexer, _ = indexed
+        rows = indexer.db.get_callees("app.py::Service.run")
+
+        assert [(r["callee_name"], r["callee_id"], r["resolution"]) for r in rows] == [
+            ("connect", "db.py::connect", "import")
+        ]
+
+    def test_a_method_on_a_constructed_object_is_linked(self, indexed):
+        indexer, _ = indexed
+        rows = {r["callee_name"]: r for r in indexer.db.get_callees("app.py::main")}
+
+        assert rows["Service"]["callee_id"] == "app.py::Service"
+        assert rows["run"]["receiver"] == "Service()"
+        assert rows["run"]["callee_id"] == "app.py::Service.run"
+
+    def test_callers_follow_resolved_edges_across_files(self, indexed):
+        indexer, _ = indexed
+
+        assert [r["caller_qualname"] for r in indexer.db.get_callers("db.py::connect")] == ["Service.run"]
+
+    def test_base_classes_are_resolved(self, indexed):
+        indexer, _ = indexed
+        row = indexer.db.conn.execute("SELECT base_id FROM inherits WHERE class_id = 'app.py::Service'").fetchone()
+
+        assert row["base_id"] == "app.py::Base"
+
+    def test_resolution_stats_are_kept_for_the_run(self, indexed):
+        indexer, _ = indexed
+
+        assert indexer.call_stats["import"] == 1
+        # Service(), .run() on it, and connect(): three call sites in the fixture.
+        assert sum(indexer.call_stats.values()) == 3
+
+    def test_symbols_carry_graph_metadata(self, indexed):
+        indexer, _ = indexed
+        row = indexer.db.get_symbol("app.py::Service.run")
+
+        assert row["qualname"] == "Service.run"
+        assert row["signature"] == "def run(self)"
+        assert row["parent_id"] == "app.py::Service"
+        assert row["end_line"] == 14
+
+    def test_module_level_variables_are_symbols_of_their_own_type(self, tmp_path, monkeypatch, fake_store):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "config.py").write_text("DB_PATH = '.db'\n", encoding="utf-8")
+        indexer = CodebaseIndexer(str(tmp_path), vector_store=fake_store)
+        indexer.run()
+
+        assert indexer.db.get_symbol("config.py::DB_PATH")["type"] == "variable"
+        indexer.db.close()
