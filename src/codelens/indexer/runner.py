@@ -1,11 +1,28 @@
+import json
+from collections import Counter
+from dataclasses import dataclass, field
+
 from rich.progress import track
 
 from codelens.console import console
+from codelens.graph.resolver import SymbolTable
 from codelens.indexer.chunker import SemanticChunker
 from codelens.indexer.vector_store import VectorStore
-from codelens.parser.python_parser import parse_file
+from codelens.parser.models import Function, Symbol
+from codelens.parser.python_parser import ParsedFile, parse_file
 from codelens.repository.db import DatabaseManager
 from codelens.repository.scanner import RepositoryScanner
+
+
+@dataclass
+class IndexRows:
+    """Every row one indexing run writes, collected so each table is written in one batch."""
+
+    files: list[tuple] = field(default_factory=list)
+    symbols: list[tuple] = field(default_factory=list)
+    calls: list[tuple] = field(default_factory=list)
+    imports: list[tuple] = field(default_factory=list)
+    inherits: list[tuple] = field(default_factory=list)
 
 
 class CodebaseIndexer:
@@ -18,42 +35,45 @@ class CodebaseIndexer:
         self.path = path
         self.db = db if db is not None else DatabaseManager()
         self.vector_store = vector_store if vector_store is not None else VectorStore()
+        # How the call sites of the last run were resolved, keyed by resolution label.
+        self.call_stats: Counter[str] = Counter()
 
     def run(self):
         # Clear both SQLite tables and ChromaDB vector store
         self.db.clear_all_indexed_data()
         self.vector_store.clear()
+        self.call_stats = Counter()
 
         scanner = RepositoryScanner(self.path)
         repo = scanner.scan()
 
-        all_symbols = []
-
-        # Batch collections
-        file_rows = []
-        symbol_rows = []
-        call_rows = []
-        import_rows = []
-        inherit_rows = []
-        seen_ids = set()
+        rows = IndexRows()
+        parsed_files: dict[str, ParsedFile] = {}
 
         for f in track(repo.files, description="Indexing files..."):
-            file_rows.append((str(f.path), f.language, f.size, f.lines))
+            rows.files.append((str(f.path), f.language, f.size, f.lines))
 
             if f.language == "py":
-                file_symbols = self._index_file(
-                    f, repo.root, symbol_rows, call_rows, import_rows, inherit_rows, seen_ids
-                )
-                all_symbols.extend(file_symbols)
+                rel_path = str(f.path)
+                # The parser records the repository-relative path directly, so nothing
+                # downstream has to rewrite `file_path` afterwards.
+                parsed_files[rel_path] = parse_file(repo.root / f.path, record_as=rel_path)
 
-        # Execute batch inserts in a single transaction-like burst
+        # Calls can only be resolved once every file has been parsed: `connect()`
+        # in app.py may be defined in db.py, which the loop reaches later.
+        self._assign_ids(parsed_files)
+        table = SymbolTable(parsed_files)
+        for rel_path, parsed in parsed_files.items():
+            self._collect_rows(rel_path, parsed, table, rows)
+
         with console.status("[bold blue]Writing to database...", spinner="dots"):
-            self.db.insert_files_batch(file_rows)
-            self.db.insert_imports_batch(import_rows)
-            self.db.insert_symbols_batch(symbol_rows)
-            self.db.insert_inherits_batch(inherit_rows)
-            self.db.insert_calls_batch(call_rows)
+            self.db.insert_files_batch(rows.files)
+            self.db.insert_imports_batch(rows.imports)
+            self.db.insert_symbols_batch(rows.symbols)
+            self.db.insert_inherits_batch(rows.inherits)
+            self.db.insert_calls_batch(rows.calls)
 
+        all_symbols = [sym for parsed in parsed_files.values() for sym in self._chunkable(parsed)]
         self._build_and_store_chunks(all_symbols)
 
         symbols_count = self.db.get_symbol_count()
@@ -77,60 +97,89 @@ class CodebaseIndexer:
         seen_ids.add(alt_id)
         return alt_id
 
-    def _index_file(self, f, root, symbol_rows, call_rows, import_rows, inherit_rows, seen_ids) -> list:
-        rel_path = str(f.path)
+    def _assign_ids(self, parsed_files: dict[str, ParsedFile]) -> None:
+        """Gives every symbol its id (`path::Qual.name`) and every method its parent."""
+        seen_ids: set[str] = set()
 
-        # The parser records the repository-relative path directly, so nothing
-        # downstream has to rewrite `file_path` afterwards.
-        parsed = parse_file(root / f.path, record_as=rel_path)
+        for rel_path, parsed in parsed_files.items():
+            class_ids: dict[str, str] = {}
 
+            for cls in parsed.classes:
+                cls.symbol_id = self._get_unique_id(f"{rel_path}::{cls.qualname}", cls.line_number, seen_ids)
+                # A nested class belongs to the class it is written in.
+                parent_qualname = cls.qualname.rpartition(".")[0]
+                cls.parent_id = class_ids.get(parent_qualname) if parent_qualname else None
+                class_ids.setdefault(cls.qualname, cls.symbol_id)
+
+                for method in cls.methods:
+                    method.symbol_id = self._get_unique_id(
+                        f"{rel_path}::{method.qualname}", method.line_number, seen_ids
+                    )
+                    method.parent_id = cls.symbol_id
+
+            for sym in [*parsed.functions, *parsed.variables]:
+                sym.symbol_id = self._get_unique_id(f"{rel_path}::{sym.qualname}", sym.line_number, seen_ids)
+
+    def _collect_rows(self, rel_path: str, parsed: ParsedFile, table: SymbolTable, rows: IndexRows) -> None:
         for imp in parsed.imports:
-            import_rows.append((rel_path, imp.module, imp.name, imp.alias))
+            rows.imports.append((rel_path, imp.module, imp.name, imp.alias, imp.level))
 
-        file_symbols = []
+        for cls in parsed.classes:
+            rows.symbols.append(self._symbol_row(cls, "class"))
+
+            assert cls.symbol_id is not None
+            for base, base_id in zip(cls.bases, table.base_ids(cls.symbol_id)):
+                rows.inherits.append((cls.symbol_id, base, base_id))
+
+            for method in cls.methods:
+                rows.symbols.append(self._symbol_row(method, "method"))
+                self._collect_calls(method, table, rows)
+
+        for func in parsed.functions:
+            rows.symbols.append(self._symbol_row(func, "function"))
+            self._collect_calls(func, table, rows)
+
+        for var in parsed.variables:
+            rows.symbols.append(self._symbol_row(var, "variable"))
+
+    def _collect_calls(self, func: Function, table: SymbolTable, rows: IndexRows) -> None:
+        assert func.symbol_id is not None
+        for call in func.calls:
+            callee_id, resolution = table.resolve_call(func.symbol_id, call)
+            self.call_stats[resolution] += 1
+            rows.calls.append((func.symbol_id, call.name, call.line, call.receiver, callee_id, resolution))
+
+    @staticmethod
+    def _symbol_row(sym: Symbol, sym_type: str) -> tuple:
+        return (
+            sym.symbol_id,
+            sym.name,
+            sym.qualname,
+            sym_type,
+            sym.file_path,
+            sym.line_number,
+            sym.end_line_number,
+            sym.signature,
+            json.dumps(sym.decorators) if sym.decorators else None,
+            sym.parent_id,
+        )
+
+    @staticmethod
+    def _chunkable(parsed: ParsedFile) -> list[Symbol]:
+        symbols: list[Symbol] = []
 
         # The module summary is chunked but not stored as a symbol: it is a
         # retrieval aid, not something the call graph should ever point at.
         if parsed.module is not None:
-            file_symbols.append(parsed.module)
+            symbols.append(parsed.module)
 
         for cls in parsed.classes:
-            self._persist_class(cls, rel_path, symbol_rows, call_rows, inherit_rows, seen_ids)
-            file_symbols.append(cls)
-            file_symbols.extend(cls.methods)
+            symbols.append(cls)
+            symbols.extend(cls.methods)
 
-        for func in parsed.functions:
-            self._persist_function(func, rel_path, symbol_rows, call_rows, seen_ids)
-            file_symbols.append(func)
-
-        return file_symbols
-
-    def _persist_class(self, cls, rel_path: str, symbol_rows, call_rows, inherit_rows, seen_ids):
-        base_id = f"{rel_path}::{cls.name}"
-        sym_id = self._get_unique_id(base_id, cls.line_number, seen_ids)
-
-        symbol_rows.append((sym_id, cls.name, "class", rel_path, cls.line_number))
-
-        for base in cls.bases:
-            inherit_rows.append((sym_id, base))
-
-        for method in cls.methods:
-            meth_base_id = f"{rel_path}::{cls.name}.{method.name}"
-            meth_id = self._get_unique_id(meth_base_id, method.line_number, seen_ids)
-
-            symbol_rows.append((meth_id, method.name, "method", rel_path, method.line_number))
-
-            for call_name, call_line in method.calls:
-                call_rows.append((meth_id, call_name, call_line))
-
-    def _persist_function(self, func, rel_path: str, symbol_rows, call_rows, seen_ids):
-        base_id = f"{rel_path}::{func.name}"
-        sym_id = self._get_unique_id(base_id, func.line_number, seen_ids)
-
-        symbol_rows.append((sym_id, func.name, "function", rel_path, func.line_number))
-
-        for call_name, call_line in func.calls:
-            call_rows.append((sym_id, call_name, call_line))
+        symbols.extend(parsed.functions)
+        symbols.extend(parsed.variables)
+        return symbols
 
     def _build_and_store_chunks(self, symbols: list):
         with console.status("[bold green]Chunking codebase...", spinner="dots"):
