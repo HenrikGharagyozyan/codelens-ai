@@ -73,7 +73,7 @@ class CodebaseIndexer:
             while f"{alt_id}_{counter}" in seen_ids:
                 counter += 1
             alt_id = f"{alt_id}_{counter}"
-        
+
         seen_ids.add(alt_id)
         return alt_id
 
@@ -117,7 +117,7 @@ class CodebaseIndexer:
         for method in cls.methods:
             meth_base_id = f"{rel_path}::{cls.name}.{method.name}"
             meth_id = self._get_unique_id(meth_base_id, method.line_number, seen_ids)
-            
+
             symbol_rows.append((meth_id, method.name, "method", rel_path, method.line_number))
 
             for call_name, call_line in method.calls:

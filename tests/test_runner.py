@@ -141,20 +141,20 @@ class TestSymbolIndexing:
         indexer.run()
 
         rows = indexer.db.conn.execute("SELECT id, line_number FROM symbols WHERE name = 'setting'").fetchall()
-        
+
         # We expect two methods named 'setting'
         assert len(rows) == 2
 
         ids = {row["id"] for row in rows}
-        
+
         base_id = "props.py::Config.setting"
         # One should have the clean base ID
         assert base_id in ids
-        
+
         # The other must have the line number appended to avoid overwriting
         other_id = next(i for i in ids if i != base_id)
         assert other_id.startswith(f"{base_id}:")
-        
+
         indexer.db.close()
 
 
