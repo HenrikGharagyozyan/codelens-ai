@@ -6,8 +6,15 @@ Run against an up-to-date index:
     uv run python scripts/eval_recall.py
 
 The point is not the absolute number but the comparison: vector-only against
-keyword-only against hybrid. If hybrid does not beat both, the fusion is not
-earning its complexity.
+keyword-only against hybrid against hybrid+graph. If a configuration does not
+beat the simpler ones, it is not earning its complexity.
+
+Queries come in two categories:
+
+- lookup      the answer is the code the question describes;
+- call_chain  the answer is a caller or callee of the code the question
+              describes, a hop or more away. This is what graph expansion is
+              for, and the only place it can be expected to win.
 """
 
 import argparse
@@ -64,6 +71,14 @@ class Retrievers:
     def hybrid(self, query: str, limit: int) -> list[dict]:
         return self.retriever._hybrid_search(query, limit=limit)
 
+    def hybrid_graph(self, query: str, limit: int) -> list[dict]:
+        return self.retriever._graph_search(query, limit=limit)
+
+
+def expected_files(item: dict) -> list[str]:
+    """A query may accept several files, e.g. every command that reaches the same code."""
+    return item.get("expected_files") or [item["expected_file"]]
+
 
 def evaluate(search_fn, dataset: list[dict], depth: int) -> dict:
     """Runs one configuration over the dataset and returns its metrics."""
@@ -72,10 +87,11 @@ def evaluate(search_fn, dataset: list[dict], depth: int) -> dict:
     per_query = []
 
     for item in dataset:
-        expected = item["expected_file"]
+        expected = expected_files(item)
         files = ranked_files(search_fn(item["query"], depth))
 
-        rank = files.index(expected) + 1 if expected in files else None
+        ranks = [files.index(path) + 1 for path in expected if path in files]
+        rank = min(ranks) if ranks else None
         for k in K_VALUES:
             if rank is not None and rank <= k:
                 hits[k] += 1
@@ -83,7 +99,7 @@ def evaluate(search_fn, dataset: list[dict], depth: int) -> dict:
 
         per_query.append({"query": item["query"], "expected": expected, "rank": rank, "files": files})
 
-    total = len(dataset)
+    total = len(dataset) or 1
     return {
         "recall": {k: hits[k] / total for k in K_VALUES},
         "mrr": sum(reciprocal_ranks) / total,
@@ -100,6 +116,17 @@ def print_per_query(result: dict) -> None:
         if rank is None:
             print(f"          expected {row['expected']}")
             print(f"          got      {row['files'][:4]}")
+
+
+def print_table(results: dict) -> None:
+    header = f"{'config':<14}" + "".join(f"{f'R@{k}':>9}" for k in K_VALUES) + f"{'MRR':>9}"
+    print(header)
+    print("-" * len(header))
+    for name, result in results.items():
+        row = f"{name:<14}"
+        row += "".join(f"{result['recall'][k]:>8.0%} " for k in K_VALUES)
+        row += f"{result['mrr']:>8.3f} "
+        print(row)
 
 
 def main() -> int:
@@ -126,29 +153,27 @@ def main() -> int:
             "vector": retrievers.vector,
             "keyword": retrievers.keyword,
             "hybrid": retrievers.hybrid,
+            "hybrid+graph": retrievers.hybrid_graph,
         }
+
+        categories = sorted({item.get("category", "lookup") for item in dataset})
+        subsets = {"all": dataset} | {c: [q for q in dataset if q.get("category", "lookup") == c] for c in categories}
 
         print(f"Evaluating {len(dataset)} queries at depth {args.depth}\n")
 
-        results = {}
-        for name, search_fn in configurations.items():
-            results[name] = evaluate(search_fn, dataset, args.depth)
-            if args.verbose:
-                print(f"--- {name} ---")
-                print_per_query(results[name])
-                print()
+        for subset_name, subset in subsets.items():
+            results = {}
+            for name, search_fn in configurations.items():
+                results[name] = evaluate(search_fn, subset, args.depth)
+                if args.verbose:
+                    print(f"--- {subset_name} / {name} ---")
+                    print_per_query(results[name])
+                    print()
 
-        header = f"{'config':<10}" + "".join(f"{f'R@{k}':>9}" for k in K_VALUES) + f"{'MRR':>9}"
-        print(header)
-        print("-" * len(header))
-        for name, result in results.items():
-            row = f"{name:<10}"
-            row += "".join(f"{result['recall'][k]:>8.0%} " for k in K_VALUES)
-            row += f"{result['mrr']:>8.3f} "
-            print(row)
-
-        best = max(results, key=lambda name: results[name]["mrr"])
-        print(f"\nBest by MRR: {best}")
+            print(f"[{subset_name}: {len(subset)} queries]")
+            print_table(results)
+            best = max(results, key=lambda name: results[name]["mrr"])
+            print(f"Best by MRR: {best}\n")
         return 0
     finally:
         db.close()
