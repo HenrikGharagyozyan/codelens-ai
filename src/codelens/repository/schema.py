@@ -5,7 +5,7 @@
 # created table is never altered -- without a version check, a schema change
 # would silently apply only to brand-new databases (this is exactly how a
 # tokenizer change to chunks_fts went unnoticed once).
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Index tables, dropped and rebuilt on a version change. The chat tables are
 # deliberately absent: conversations must survive both re-indexing and upgrades.
@@ -35,9 +35,14 @@ CREATE TABLE IF NOT EXISTS files (
 CREATE TABLE IF NOT EXISTS symbols (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    type TEXT NOT NULL,  -- 'class' or 'function'
+    qualname TEXT,          -- 'Service.run': the dotted path inside the file
+    type TEXT NOT NULL,     -- 'class', 'method', 'function' or 'variable'
     file_path TEXT NOT NULL,
     line_number INTEGER,
+    end_line INTEGER,
+    signature TEXT,         -- 'def run(self, retries: int = 3) -> bool'
+    decorators TEXT,        -- JSON list: '["property"]'
+    parent_id TEXT,         -- the enclosing class of a method or nested class
     FOREIGN KEY (file_path) REFERENCES files(path)
 );
 
@@ -45,6 +50,9 @@ CREATE TABLE IF NOT EXISTS calls (
     caller_id TEXT,
     callee_name TEXT,
     line_number INTEGER,
+    receiver TEXT,          -- what the call was made on: NULL for foo(), 'self', 'self.db', ...
+    callee_id TEXT,         -- the resolved target symbol; NULL when it could not be resolved
+    resolution TEXT,        -- how callee_id was found, or why not (see graph/resolver.py)
     FOREIGN KEY (caller_id) REFERENCES symbols(id)
 );
 
@@ -79,6 +87,7 @@ CREATE TABLE IF NOT EXISTS imports (
     module TEXT,
     name TEXT,
     alias TEXT,
+    level INTEGER NOT NULL DEFAULT 0,  -- 0 absolute, 1 for 'from .', 2 for 'from ..'
     FOREIGN KEY (file_path) REFERENCES files(path)
 );
 
@@ -86,6 +95,7 @@ CREATE TABLE IF NOT EXISTS inherits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     class_id TEXT,
     base_name TEXT,
+    base_id TEXT,           -- the resolved base class; NULL for external bases
     FOREIGN KEY (class_id) REFERENCES symbols(id)
 );
 
@@ -93,6 +103,10 @@ CREATE INDEX IF NOT EXISTS idx_calls_caller ON calls(caller_id);
 CREATE INDEX IF NOT EXISTS idx_calls_callee ON calls(callee_name);
 CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
 CREATE INDEX IF NOT EXISTS idx_chunks_symbol ON chunks(symbol_name);
+CREATE INDEX IF NOT EXISTS idx_calls_callee_id ON calls(callee_id);
+CREATE INDEX IF NOT EXISTS idx_symbols_qualname ON symbols(qualname);
+CREATE INDEX IF NOT EXISTS idx_symbols_parent ON symbols(parent_id);
+CREATE INDEX IF NOT EXISTS idx_chunks_location ON chunks(file_path, start_line);
 
 -- FTS5 Virtual Table for true hybrid search (BM25)
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
