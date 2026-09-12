@@ -1,65 +1,152 @@
 {
-  "_comment": "Ground truth for retrieval evaluation. Kept as JSON, not Python, so the queries never enter the indexed corpus -- a .py file here would be chunked and would then win every lexical match against itself.",
+  "_comment": "Ground truth for retrieval evaluation. Kept as JSON, not Python, so the queries never enter the indexed corpus -- a .py file here would be chunked and would then win every lexical match against itself. 'lookup' queries describe the code that answers them; 'call_chain' queries describe a callee and expect its caller (or vice versa), one or more hops away. Every call_chain answer was checked against the call sites in the source with grep, not against the resolver's own output.",
   "queries": [
     {
       "query": "Where is the FTS5 virtual table created and kept in sync?",
-      "expected_file": "src/codelens/repository/schema.py"
+      "expected_file": "src/codelens/repository/schema.py",
+      "category": "lookup"
     },
     {
       "query": "How does the system combine vector and lexical search using reciprocal rank fusion?",
-      "expected_file": "src/codelens/context/retriever.py"
+      "expected_file": "src/codelens/context/retriever.py",
+      "category": "lookup"
     },
     {
       "query": "Turning a natural language question into an FTS5 MATCH expression",
-      "expected_file": "src/codelens/repository/fts.py"
+      "expected_file": "src/codelens/repository/fts.py",
+      "category": "lookup"
     },
     {
       "query": "How is the AST parser extracting classes and functions?",
-      "expected_file": "src/codelens/parser/python_parser.py"
+      "expected_file": "src/codelens/parser/python_parser.py",
+      "category": "lookup"
     },
     {
       "query": "System instruction preamble sent to the language model",
-      "expected_file": "src/codelens/llm/prompts.py"
+      "expected_file": "src/codelens/llm/prompts.py",
+      "category": "lookup"
     },
     {
       "query": "Where are wrong line numbers in an answer corrected?",
-      "expected_file": "src/codelens/context/citations.py"
+      "expected_file": "src/codelens/context/citations.py",
+      "category": "lookup"
     },
     {
       "query": "Walking the directory tree while honouring gitignore rules",
-      "expected_file": "src/codelens/repository/scanner.py"
+      "expected_file": "src/codelens/repository/scanner.py",
+      "category": "lookup"
     },
     {
       "query": "Splitting source code into semantic chunks on AST boundaries",
-      "expected_file": "src/codelens/indexer/chunker.py"
+      "expected_file": "src/codelens/indexer/chunker.py",
+      "category": "lookup"
     },
     {
       "query": "Storing embeddings and querying them by cosine similarity",
-      "expected_file": "src/codelens/indexer/vector_store.py"
+      "expected_file": "src/codelens/indexer/vector_store.py",
+      "category": "lookup"
     },
     {
       "query": "Saving and resuming conversation history across sessions",
-      "expected_file": "src/codelens/repository/chat.py"
+      "expected_file": "src/codelens/repository/chat.py",
+      "category": "lookup"
     },
     {
       "query": "Orchestrating the full indexing run over every file",
-      "expected_file": "src/codelens/indexer/runner.py"
+      "expected_file": "src/codelens/indexer/runner.py",
+      "category": "lookup"
     },
     {
       "query": "Which functions call a given symbol?",
-      "expected_file": "src/codelens/repository/db.py"
+      "expected_file": "src/codelens/repository/db.py",
+      "category": "lookup"
     },
     {
       "query": "Lazily constructing shared dependencies for CLI commands",
-      "expected_file": "src/codelens/cli/context.py"
+      "expected_file": "src/codelens/cli/context.py",
+      "category": "lookup"
     },
     {
       "query": "Sending a streaming chat message with tool calling",
-      "expected_file": "src/codelens/llm/gemini.py"
+      "expected_file": "src/codelens/llm/gemini.py",
+      "category": "lookup"
     },
     {
       "query": "Where are the database and vector store paths configured?",
-      "expected_file": "src/codelens/config.py"
+      "expected_file": "src/codelens/config.py",
+      "category": "lookup"
+    },
+    {
+      "query": "Which CLI command ends up writing chunk embeddings into the vector store?",
+      "expected_files": [
+        "src/codelens/cli/commands_index.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Which user-facing commands trigger repairing wrong citations in the model's answer?",
+      "expected_files": [
+        "src/codelens/cli/commands_search.py",
+        "src/codelens/cli/commands_chat.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "What code streams the model's reply to the terminal as it is generated?",
+      "expected_files": [
+        "src/codelens/cli/commands_chat.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Who uses the gitignore-aware directory scanner?",
+      "expected_files": [
+        "src/codelens/indexer/runner.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Which command opens a Gemini session with the code search tool attached?",
+      "expected_files": [
+        "src/codelens/cli/commands_chat.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Where is the call resolver invoked for every call site during indexing?",
+      "expected_files": [
+        "src/codelens/indexer/runner.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "What calls the FTS5 MATCH expression builder?",
+      "expected_files": [
+        "src/codelens/repository/db.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Which command saves each chat turn to SQLite?",
+      "expected_files": [
+        "src/codelens/cli/commands_chat.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Which component runs the Python AST parser over every scanned file?",
+      "expected_files": [
+        "src/codelens/indexer/runner.py"
+      ],
+      "category": "call_chain"
+    },
+    {
+      "query": "Who builds the call graph view that renders call chains?",
+      "expected_files": [
+        "src/codelens/context/retriever.py",
+        "src/codelens/cli/commands_debug.py"
+      ],
+      "category": "call_chain"
     }
   ]
 }
