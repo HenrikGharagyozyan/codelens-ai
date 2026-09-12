@@ -297,3 +297,81 @@ class TestRenderHelpers:
         retriever = ContextRetriever(populated_db, FakeVectorStore())
 
         assert retriever._render_call_graph("lone", "src/lone.py", 1, 3) == []
+
+
+@pytest.fixture
+def graph_db(populated_db):
+    """populated_db plus resolved edges: main -> Service.run -> connect, and chunks for each."""
+    db = populated_db
+    db.insert_symbol("src/main.py::main", "main", "function", "src/main.py", 1)
+    db.insert_call(
+        "src/main.py::main", "run", 2, receiver="Service()", callee_id="src/app.py::Service.run", resolution="typed"
+    )
+    db.conn.execute("UPDATE symbols SET qualname = 'Service.run' WHERE id = 'src/app.py::Service.run'")
+    db.conn.execute(
+        "UPDATE calls SET callee_id = 'src/db.py::connect', resolution = 'import' "
+        "WHERE caller_id = 'src/app.py::Service.run' AND callee_name = 'connect'"
+    )
+    db.conn.execute("UPDATE calls SET resolution = 'builtin' WHERE callee_name = 'print'")
+    for chunk in [
+        ("src/app.py::run:10", "src/app.py", "run", "function", 10, 14, "def run(self): ..."),
+        ("src/db.py::connect:42", "src/db.py", "connect", "function", 42, 44, "def connect(): ..."),
+        ("src/main.py::main:1", "src/main.py", "main", "function", 1, 3, "def main(): ..."),
+    ]:
+        db.conn.execute("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?)", chunk)
+    db.conn.commit()
+    return db
+
+
+def connect_hit():
+    return vector_hit(
+        "src/db.py::connect:42",
+        "def connect(): ...",
+        symbol_name="connect",
+        file_path="src/db.py",
+        start_line=42,
+        end_line=44,
+    )
+
+
+class TestResolvedGraphContext:
+    def test_resolved_callers_are_named_by_qualified_name(self, graph_db):
+        context = ContextRetriever(graph_db, FakeVectorStore([connect_hit()])).build_context("connect")
+
+        assert "**What calls `connect`:** `Service.run` (src/app.py:10)" in context
+        assert "[name match only]" not in context
+
+    def test_multi_hop_chains_are_rendered(self, graph_db):
+        context = ContextRetriever(graph_db, FakeVectorStore([connect_hit()])).build_context("connect")
+
+        assert "Call chains leading to `connect` (verified):" in context
+        assert "`main` (src/main.py:1) -> `Service.run` (src/app.py:10) -> `connect` (src/db.py:42)" in context
+
+    def test_unresolved_same_name_callers_are_labelled_as_guesses(self, populated_db):
+        context = ContextRetriever(populated_db, FakeVectorStore([connect_hit()])).build_context("connect")
+
+        assert "`run` (src/app.py:10) [name match only]" in context
+
+    def test_graph_search_pulls_in_callers_the_query_never_matched(self, graph_db):
+        retriever = ContextRetriever(graph_db, FakeVectorStore([connect_hit()]))
+
+        hybrid = [r["chunk_id"] for r in retriever._hybrid_search("zzz", limit=3)]
+        expanded = [r["chunk_id"] for r in retriever._graph_search("zzz", limit=3)]
+
+        assert hybrid == ["src/db.py::connect:42"]
+        assert expanded[0] == "src/db.py::connect:42"
+        assert set(expanded[1:]) == {"src/app.py::run:10", "src/main.py::main:1"}
+
+    def test_nearer_neighbours_score_higher(self, graph_db):
+        retriever = ContextRetriever(graph_db, FakeVectorStore([connect_hit()]))
+
+        expanded = [r["chunk_id"] for r in retriever._graph_search("zzz", limit=3)]
+
+        assert expanded.index("src/app.py::run:10") < expanded.index("src/main.py::main:1")
+
+    def test_search_uses_graph_expansion_only_when_enabled(self, graph_db):
+        plain = ContextRetriever(graph_db, FakeVectorStore([connect_hit()]))
+        expanded = ContextRetriever(graph_db, FakeVectorStore([connect_hit()]), graph_expansion=True)
+
+        assert len(plain.search("zzz", limit=3)) == 1
+        assert len(expanded.search("zzz", limit=3)) == 3
