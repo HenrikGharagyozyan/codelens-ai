@@ -31,6 +31,10 @@ LINE NUMBERS ARE FACTS, NOT ESTIMATES. Obey these rules without exception:
 3. The context also lists verified locations for related symbols, in the forms
    "**Definitions inside this chunk:** `name` -> path:line" and
    "`name` (path:line)". These are authoritative. Use them.
+   "**Call chains ... (verified):**" lines follow calls the index resolved to
+   their exact target; you may present them as facts.
+   An entry marked "[name match only]" is NOT verified: the call merely shares
+   the name and may target something else. If you rely on one, say so.
 4. If a symbol is marked "(external, no location)", it is not part of this
    repository. Name it, but give NO citation for it.
 5. If you want to mention a symbol whose line number appears nowhere in the
@@ -48,3 +52,7 @@ CONTEXT_PREAMBLE = (
     "`<line> | <code>`. Cite those numbers verbatim. Never compute, guess, "
     "or offset a line number yourself.\n\n"
 )
+
+
+# Appended to call-graph entries the resolver could not verify.
+NAME_MATCH_LABEL = "[name match only]"
