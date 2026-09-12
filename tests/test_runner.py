@@ -271,3 +271,20 @@ class TestDegenerateRepositories:
         assert files_count == 4  # 3 sources + broken.py
         assert symbols_count == 5
         indexer.db.close()
+
+
+class TestBatchWrites:
+    def test_files_are_written_in_one_batch_not_per_row(self, project, fake_store, monkeypatch):
+        from codelens.repository.db import DatabaseManager
+
+        def per_row_insert(*args, **kwargs):
+            raise AssertionError("files must go through insert_files_batch, not one commit per file")
+
+        monkeypatch.setattr(DatabaseManager, "insert_file", per_row_insert)
+
+        indexer = CodebaseIndexer(str(project), vector_store=fake_store)
+        indexer.run()
+        paths = {row["path"] for row in indexer.db.conn.execute("SELECT path FROM files")}
+        indexer.db.close()
+
+        assert paths == {"app.py", "db.py", "notes.md"}
