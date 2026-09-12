@@ -25,9 +25,10 @@ class AppContext:
     @property
     def retriever(self):
         if self._retriever is None:
+            from codelens.config import GRAPH_EXPANSION
             from codelens.context.retriever import ContextRetriever
 
-            self._retriever = ContextRetriever(self.db, self.vector_store)
+            self._retriever = ContextRetriever(self.db, self.vector_store, graph_expansion=GRAPH_EXPANSION)
         return self._retriever
 
     @property
