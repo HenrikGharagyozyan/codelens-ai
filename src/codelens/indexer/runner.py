@@ -38,7 +38,7 @@ class CodebaseIndexer:
         seen_ids = set()
 
         for f in track(repo.files, description="Indexing files..."):
-            self.db.insert_file(str(f.path), f.language, f.size, f.lines)
+            file_rows.append((str(f.path), f.language, f.size, f.lines))
 
             if f.language == "py":
                 file_symbols = self._index_file(
