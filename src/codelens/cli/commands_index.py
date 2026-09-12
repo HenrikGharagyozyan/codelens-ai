@@ -28,6 +28,25 @@ def index(path: str = typer.Argument(".", help="Path to the repository to index"
     console.print(f"Symbols extracted: {symbols_count}")
     console.print(f"Database saved to: {db_path}")
 
+    _report_call_resolution(getattr(indexer, "call_stats", None))
+
+
+def _report_call_resolution(stats) -> None:
+    """One line on how much of the call graph is backed by resolved edges."""
+    if not stats:
+        return
+
+    from codelens.graph.resolver import RESOLVED
+
+    total = sum(stats.values())
+    resolved = sum(n for how, n in stats.items() if how in RESOLVED)
+    outside = sum(n for how, n in stats.items() if how in ("builtin", "external"))
+    unresolved = total - resolved - outside
+    console.print(
+        f"Call sites: {total} ({resolved / total:.0%} resolved to a symbol, "
+        f"{outside / total:.0%} builtin or external, {unresolved / total:.0%} unresolved)"
+    )
+
 
 @app.command()
 def inspect(file: str = typer.Argument(..., help="Path to a Python file to inspect")):
