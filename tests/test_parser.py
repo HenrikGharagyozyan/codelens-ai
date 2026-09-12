@@ -199,8 +199,10 @@ def outer():
         _, functions, _ = parse_code(code)
         by_name = {f.name: f for f in functions}
 
-        assert by_name["outer"].calls == [("outer_call", 3), ("after_inner", 8)]
-        assert by_name["inner"].calls == [("inner_call", 6)]
+        # The nested 'inner' function should not be exposed as a top-level symbol.
+        assert "inner" not in by_name
+        # Its calls should be attributed to the parent function in AST traversal order.
+        assert by_name["outer"].calls == [("outer_call", 3), ("inner_call", 6), ("after_inner", 8)]
 
     def test_module_level_calls_are_not_attributed_to_any_function(self, parse_code):
         _, functions, _ = parse_code("print('hi')\n\ndef f():\n    pass\n")

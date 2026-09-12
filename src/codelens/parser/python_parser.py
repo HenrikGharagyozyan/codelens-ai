@@ -45,6 +45,13 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.current_class = previous_class
 
     def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef):
+        # Check if we are already inside a function (prevents nested helpers from escaping)
+        if self.current_function is not None:
+            # We are inside a nested helper function.
+            # Do not create a separate symbol. Calls inside will be attributed to the parent function.
+            self.generic_visit(node)
+            return
+
         # Collect function argument names
         args = [arg.arg for arg in node.args.args]
 
@@ -58,10 +65,7 @@ class PythonAstVisitor(ast.NodeVisitor):
             docstring=ast.get_docstring(node),
         )
 
-        # Check if we are already inside a function (prevents nested helpers from escaping)
-        is_nested = self.current_function is not None
-
-        if self.current_class and not is_nested:
+        if self.current_class:
             self.current_class.methods.append(func)
         else:
             self.functions.append(func)

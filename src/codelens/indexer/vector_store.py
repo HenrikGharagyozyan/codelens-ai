@@ -22,7 +22,7 @@ class VectorStore:
         except Exception:
             pass
 
-        self.collection = self.client.get_or_create_collection(name="code_chunks", metadata={"hnsw:space": "cosine"})
+        self.collection = self.client.get_or_create_collection(name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"})
 
     def add_chunks(self, chunks: list[Chunk]):
         """Converts chunks into vectors and stores them in ChromaDB."""

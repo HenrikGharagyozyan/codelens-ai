@@ -17,11 +17,6 @@ class Symbol:
     end_line_number: int | None = None  # For chunking
     docstring: str | None = None  # Saved documentation for LLM context
 
-    @property
-    def symbol_id(self) -> str:
-        """Generates a composite ID to prevent collisions (e.g., @property getters/setters)."""
-        return f"{self.file_path}::{self.name}::{self.line_number}"
-
 
 @dataclass
 class Function(Symbol):
