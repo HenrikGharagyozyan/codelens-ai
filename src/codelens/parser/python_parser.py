@@ -108,7 +108,7 @@ class PythonAstVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign):
-        # Capture only global variables (not inside classes or functions)
+        # Capture only global variables3 (not inside classes or functions)
         if not self.current_class and not self.current_function:
             for target in node.targets:
                 if isinstance(target, ast.Name):
