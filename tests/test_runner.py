@@ -125,6 +125,38 @@ class TestSymbolIndexing:
 
         assert row["name"] == "connect"
 
+    def test_symbol_id_collisions_are_resolved_by_line_number(self, tmp_path, monkeypatch, fake_store):
+        code = """class Config:
+    @property
+    def setting(self):
+        return 1
+
+    @setting.setter
+    def setting(self, v):
+        pass
+"""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "props.py").write_text(code, encoding="utf-8")
+        indexer = CodebaseIndexer(str(tmp_path), vector_store=fake_store)
+        indexer.run()
+
+        rows = indexer.db.conn.execute("SELECT id, line_number FROM symbols WHERE name = 'setting'").fetchall()
+        
+        # We expect two methods named 'setting'
+        assert len(rows) == 2
+
+        ids = {row["id"] for row in rows}
+        
+        base_id = "props.py::Config.setting"
+        # One should have the clean base ID
+        assert base_id in ids
+        
+        # The other must have the line number appended to avoid overwriting
+        other_id = next(i for i in ids if i != base_id)
+        assert other_id.startswith(f"{base_id}:")
+        
+        indexer.db.close()
+
 
 class TestRelationships:
     def test_call_edges_record_the_real_call_line(self, indexed):
