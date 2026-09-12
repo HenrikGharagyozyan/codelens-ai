@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from codelens.parser.models import Class, Function, Module, Symbol
+from codelens.parser.models import Class, Function, Module, Symbol, Variable
 
 
 @dataclass
@@ -15,7 +15,7 @@ class Chunk:
     start_line: int
     end_line: int
     content: str  # The original source code
-    symbol_type: str  # "function" or "class"
+    symbol_type: str  # "module", "class", "function" or "variable"
 
 
 class SemanticChunker:
@@ -76,7 +76,12 @@ class SemanticChunker:
             sym_type = "class"
         else:
             content, end_idx = self._render_body(sym, lines, start_idx)
-            sym_type = "function" if isinstance(sym, Function) else "symbol"
+            if isinstance(sym, Function):
+                sym_type = "function"
+            elif isinstance(sym, Variable):
+                sym_type = "variable"
+            else:
+                sym_type = "symbol"
 
         return Chunk(
             chunk_id=f"{sym.file_path}::{sym.name}:{sym.line_number}",
