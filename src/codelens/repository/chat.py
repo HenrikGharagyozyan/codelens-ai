@@ -42,3 +42,4 @@ class ChatRepository:
                 (limit,),
             )
             return cursor.fetchall()
+        
