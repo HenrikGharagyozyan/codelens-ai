@@ -1,0 +1,307 @@
+{
+  "repo": "flask",
+  "questions": [
+    {
+      "id": "flask-01",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is the WSGI entry point that pushes a request context and dispatches the request?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.wsgi_app in src/flask/app.py creates a RequestContext, pushes it, calls full_dispatch_request, handles errors with handle_exception and pops the context; Flask.__call__ delegates to it."
+    },
+    {
+      "id": "flask-02",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How does Flask turn a view's return value into a response object?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.make_response in src/flask/app.py: strings and bytes become the body, dicts and lists go through the JSON provider (self.json.response), and tuples of (body, status), (body, headers) or (body, status, headers) are unpacked."
+    },
+    {
+      "id": "flask-03",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where are before_request functions run before the view?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.preprocess_request in src/flask/app.py runs the url_value_preprocessors and then before_request_funcs for the app and the request's blueprints; a non-None return value becomes the response and the view is skipped."
+    },
+    {
+      "id": "flask-04",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are session cookies signed?",
+      "expected_files": [
+        "src/flask/sessions.py"
+      ],
+      "reference": "SecureCookieSessionInterface in src/flask/sessions.py signs the cookie with itsdangerous' URLSafeTimedSerializer using the app's SECRET_KEY, salt 'cookie-session' and SHA-1 (_lazy_sha1); open_session loads it and save_session writes it."
+    },
+    {
+      "id": "flask-05",
+      "category": "lookup",
+      "split": "test",
+      "query": "How is configuration loaded from a Python file, prefixed environment variables or an object?",
+      "expected_files": [
+        "src/flask/config.py"
+      ],
+      "reference": "The Config class in src/flask/config.py: from_pyfile executes a Python file, from_prefixed_env reads FLASK_-prefixed environment variables, from_object copies uppercase attributes; there are also from_envvar, from_file and from_mapping."
+    },
+    {
+      "id": "flask-06",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How does the flask command find the application to load?",
+      "expected_files": [
+        "src/flask/cli.py"
+      ],
+      "reference": "In src/flask/cli.py, ScriptInfo.load_app uses prepare_import and locate_app; find_app_by_string handles an 'app' name or a factory call, and find_best_app looks for app/application or a create_app/make_app factory."
+    },
+    {
+      "id": "flask-07",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is the development server started by `flask run`?",
+      "expected_files": [
+        "src/flask/cli.py"
+      ],
+      "reference": "run_command in src/flask/cli.py implements `flask run`: it loads the app and starts Werkzeug's run_simple with host, port, reloader, debugger and certificate options."
+    },
+    {
+      "id": "flask-08",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are templates found across the application and all its blueprints?",
+      "expected_files": [
+        "src/flask/templating.py"
+      ],
+      "reference": "DispatchingJinjaLoader in src/flask/templating.py tries the application's loader and then every blueprint's loader (via _iter_loaders and app.iter_blueprints)."
+    },
+    {
+      "id": "flask-09",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where are flashed messages stored and read back?",
+      "expected_files": [
+        "src/flask/helpers.py"
+      ],
+      "reference": "flash() in src/flask/helpers.py appends (category, message) to session['_flashes']; get_flashed_messages() pops them from the session and caches them on the request context (request_ctx.flashes)."
+    },
+    {
+      "id": "flask-10",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How does a class-based view route a request to a method named get or post?",
+      "expected_files": [
+        "src/flask/views.py"
+      ],
+      "reference": "MethodView.dispatch_request in src/flask/views.py looks up getattr(self, request.method.lower()) and calls it; __init_subclass__ collects the supported methods."
+    },
+    {
+      "id": "flask-11",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where is a blueprint's deferred setup recorded and later applied?",
+      "expected_files": [
+        "src/flask/sansio/blueprints.py"
+      ],
+      "reference": "Blueprint.record in src/flask/sansio/blueprints.py appends setup functions to deferred_functions; Blueprint.register runs each of them with a BlueprintSetupState when the blueprint is registered."
+    },
+    {
+      "id": "flask-12",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are dates, UUIDs and dataclasses serialised to JSON?",
+      "expected_files": [
+        "src/flask/json/provider.py"
+      ],
+      "reference": "The _default function used by DefaultJSONProvider in src/flask/json/provider.py turns dates into HTTP date strings, Decimal and UUID into strings, and dataclasses into dicts via dataclasses.asdict."
+    },
+    {
+      "id": "flask-13",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How can a test modify the session before making a request?",
+      "expected_files": [
+        "src/flask/testing.py"
+      ],
+      "reference": "FlaskClient.session_transaction in src/flask/testing.py opens the session with the app's session_interface, yields it for modification, then saves it back into the client's cookies."
+    },
+    {
+      "id": "flask-14",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where is the application context pushed and popped?",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "reference": "AppContext.push and AppContext.pop in src/flask/ctx.py bind and unbind the application context; pop calls app.do_teardown_appcontext before unbinding."
+    },
+    {
+      "id": "flask-15",
+      "category": "lookup",
+      "split": "test",
+      "query": "How is the error handler for an exception class or HTTP code looked up?",
+      "expected_files": [
+        "src/flask/sansio/app.py"
+      ],
+      "reference": "App._find_error_handler in src/flask/sansio/app.py searches the handlers of the request's blueprints and then the app, by HTTP code and along the exception class's MRO."
+    },
+    {
+      "id": "flask-16",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is the command that lists all URL rules implemented?",
+      "expected_files": [
+        "src/flask/cli.py"
+      ],
+      "reference": "routes_command in src/flask/cli.py implements `flask routes`: it lists rules with endpoints and methods and can sort by endpoint, methods, domain, rule or match order."
+    },
+    {
+      "id": "flask-17",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How can URLs be built outside of a request?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.url_for in src/flask/app.py uses an app-context URL adapter from create_url_adapter when there is no request; that needs SERVER_NAME (with APPLICATION_ROOT and PREFERRED_URL_SCHEME)."
+    },
+    {
+      "id": "flask-18",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What opens the session when a request starts?",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "reference": "RequestContext.push in src/flask/ctx.py calls session_interface.open_session(app, request) on the app's SessionInterface (SecureCookieSessionInterface by default)."
+    },
+    {
+      "id": "flask-19",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What saves the session cookie onto the response after the view has run?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.process_response in src/flask/app.py runs the after_request functions and then calls session_interface.save_session(self, ctx._session, response) unless the session is a null session."
+    },
+    {
+      "id": "flask-20",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Which function simply delegates to the app's JSON provider to build a JSON response?",
+      "expected_files": [
+        "src/flask/json/__init__.py"
+      ],
+      "reference": "flask.json.jsonify in src/flask/json/__init__.py returns current_app.json.response(*args, **kwargs)."
+    },
+    {
+      "id": "flask-21",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What calls a blueprint's register method?",
+      "expected_files": [
+        "src/flask/sansio/app.py",
+        "src/flask/sansio/blueprints.py"
+      ],
+      "reference": "App.register_blueprint in src/flask/sansio/app.py calls blueprint.register(self, options); Blueprint.register in src/flask/sansio/blueprints.py does the same for nested blueprints."
+    },
+    {
+      "id": "flask-22",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What calls the application's teardown_appcontext functions?",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "reference": "AppContext.pop in src/flask/ctx.py calls app.do_teardown_appcontext(exc); RequestContext.pop calls app.do_teardown_request(exc)."
+    },
+    {
+      "id": "flask-23",
+      "category": "call_chain",
+      "split": "test",
+      "query": "Which code serves static files through send_from_directory?",
+      "expected_files": [
+        "src/flask/app.py",
+        "src/flask/blueprints.py"
+      ],
+      "reference": "Flask.send_static_file in src/flask/app.py and Blueprint.send_static_file in src/flask/blueprints.py call send_from_directory with the static folder."
+    },
+    {
+      "id": "flask-24",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What invokes the error handler lookup when a view raises an exception?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.handle_user_exception, handle_http_exception and handle_exception in src/flask/app.py call _find_error_handler(e, request.blueprints); full_dispatch_request calls handle_user_exception."
+    },
+    {
+      "id": "flask-25",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What matches the incoming request URL against the URL map?",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "reference": "RequestContext.match_request in src/flask/ctx.py calls self.url_adapter.match(return_rule=True), and RequestContext.push invokes it."
+    },
+    {
+      "id": "flask-26",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What serialises tagged JSON values for the session cookie?",
+      "expected_files": [
+        "src/flask/sessions.py"
+      ],
+      "reference": "src/flask/sessions.py creates session_json_serializer = TaggedJSONSerializer() (from src/flask/json/tag.py) and SecureCookieSessionInterface uses it as its serializer."
+    },
+    {
+      "id": "flask-27",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What pushes an application context when a request context is pushed without one?",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "reference": "RequestContext.push in src/flask/ctx.py checks for an active app context and, if there is none, calls self.app.app_context() and pushes it."
+    },
+    {
+      "id": "flask-28",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What applies the url_defaults functions when a URL is built?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.url_for in src/flask/app.py calls self.inject_url_defaults(endpoint, values), which is defined in src/flask/sansio/app.py."
+    },
+    {
+      "id": "flask-29",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What registers the route that serves static files through send_static_file?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.__init__ in src/flask/app.py adds a URL rule at static_url_path with endpoint 'static' whose view calls send_static_file."
+    },
+    {
+      "id": "flask-30",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What turns a view's return value into a response after dispatch?",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "reference": "Flask.finalize_request in src/flask/app.py calls self.make_response(rv) and then process_response; full_dispatch_request calls finalize_request."
+    }
+  ]
+}

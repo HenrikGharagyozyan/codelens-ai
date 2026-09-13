@@ -15,3 +15,6 @@ env/
 *.db
 .env
 .codelens_vector/
+
+# Benchmark checkouts and indexes of third-party repositories (scripts/eval_benchmark.py)
+.bench/
