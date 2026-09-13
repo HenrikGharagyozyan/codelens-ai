@@ -32,6 +32,8 @@ dev = [
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+# Third-party repositories checked out by scripts/eval_benchmark.py.
+extend-exclude = [".bench"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "E501"]
