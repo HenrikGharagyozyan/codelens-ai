@@ -1,0 +1,305 @@
+{
+  "repo": "httpx",
+  "questions": [
+    {
+      "id": "httpx-01",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where is a Digest authentication challenge parsed from the WWW-Authenticate header?",
+      "expected_files": [
+        "httpx/_auth.py"
+      ],
+      "reference": "In httpx/_auth.py: DigestAuth.auth_flow looks for a 'WWW-Authenticate: Digest' header on a 401 response, and DigestAuth._parse_challenge parses it into a _DigestAuthChallenge (realm, nonce, qop, opaque, algorithm)."
+    },
+    {
+      "id": "httpx-02",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How are credentials read from the user's .netrc file?",
+      "expected_files": [
+        "httpx/_auth.py"
+      ],
+      "reference": "NetRCAuth in httpx/_auth.py lazily imports the standard-library netrc module, looks up the request host with authenticators(), and if credentials exist adds a Basic Authorization header."
+    },
+    {
+      "id": "httpx-03",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where is the SSL context for certificate verification created?",
+      "expected_files": [
+        "httpx/_config.py"
+      ],
+      "reference": "create_ssl_context in httpx/_config.py: with verify=True it uses certifi's CA bundle, or SSL_CERT_FILE / SSL_CERT_DIR when trust_env is set; verify=False disables verification; an optional client cert is loaded."
+    },
+    {
+      "id": "httpx-04",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where are the connect, read, write and pool timeouts defined?",
+      "expected_files": [
+        "httpx/_config.py"
+      ],
+      "reference": "The Timeout class in httpx/_config.py holds connect, read, write and pool timeouts; a single value sets all four, and as_dict() exposes them for the transport."
+    },
+    {
+      "id": "httpx-05",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How are proxy settings picked up from environment variables like HTTP_PROXY and NO_PROXY?",
+      "expected_files": [
+        "httpx/_utils.py"
+      ],
+      "reference": "get_environment_proxies in httpx/_utils.py calls urllib.request.getproxies() and turns the result into URL-pattern keys mapped to proxy URLs, with NO_PROXY hosts mapped to None."
+    },
+    {
+      "id": "httpx-06",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How does the client decide which HTTP method to use after a redirect?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "BaseClient._redirect_method in httpx/_client.py: a 303 or 302 turns any method except HEAD into GET, and a 301 turns POST into GET."
+    },
+    {
+      "id": "httpx-07",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is the Authorization header removed when a redirect goes to another site?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "BaseClient._redirect_headers in httpx/_client.py drops Authorization when the new URL is not the same origin (an http-to-https upgrade on the same host is allowed), drops Content-Length/Transfer-Encoding when the method becomes GET, and removes Cookie."
+    },
+    {
+      "id": "httpx-08",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are gzip, deflate, brotli and zstd response bodies decoded?",
+      "expected_files": [
+        "httpx/_decoders.py"
+      ],
+      "reference": "httpx/_decoders.py defines ContentDecoder subclasses: IdentityDecoder, DeflateDecoder, GZipDecoder, BrotliDecoder and ZStandardDecoder, plus MultiDecoder for several Content-Encoding values."
+    },
+    {
+      "id": "httpx-09",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is a multipart/form-data body with file uploads built?",
+      "expected_files": [
+        "httpx/_multipart.py"
+      ],
+      "reference": "MultipartStream in httpx/_multipart.py builds the body from DataField and FileField parts with a boundary; FileField guesses the content type from the file name."
+    },
+    {
+      "id": "httpx-10",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where does a response raise an error for 4xx and 5xx status codes?",
+      "expected_files": [
+        "httpx/_models.py"
+      ],
+      "reference": "Response.raise_for_status in httpx/_models.py returns the response when it is a success and raises HTTPStatusError for 4xx/5xx; it raises RuntimeError if no request is attached."
+    },
+    {
+      "id": "httpx-11",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How is a URL string parsed and normalised, including internationalised host names?",
+      "expected_files": [
+        "httpx/_urlparse.py"
+      ],
+      "reference": "httpx/_urlparse.py: urlparse() splits and validates the URL, encode_host() normalises the host using IDNA for non-ASCII names, and normalize_path()/normalize_port() clean up the rest."
+    },
+    {
+      "id": "httpx-12",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where does the httpx command-line tool print response headers and the body?",
+      "expected_files": [
+        "httpx/_main.py"
+      ],
+      "reference": "httpx/_main.py: print_response_headers and print_response render the response with Rich, choosing a syntax-highlighting lexer via get_lexer_for_response."
+    },
+    {
+      "id": "httpx-13",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How are httpcore exceptions translated into httpx exceptions?",
+      "expected_files": [
+        "httpx/_transports/default.py"
+      ],
+      "reference": "map_httpcore_exceptions in httpx/_transports/default.py is a context manager that catches httpcore exceptions and re-raises the matching httpx exception, using the mapping from _load_httpcore_exceptions."
+    },
+    {
+      "id": "httpx-14",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How can requests be sent directly to a WSGI application without a network?",
+      "expected_files": [
+        "httpx/_transports/wsgi.py"
+      ],
+      "reference": "WSGITransport in httpx/_transports/wsgi.py builds a WSGI environ from the request, calls the WSGI app, and wraps its status, headers and body in a Response."
+    },
+    {
+      "id": "httpx-15",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How are mount and proxy URL patterns matched against a request URL?",
+      "expected_files": [
+        "httpx/_utils.py"
+      ],
+      "reference": "URLPattern in httpx/_utils.py matches URLs against keys such as 'all://' or 'https://example.com'; its priority ordering makes more specific patterns win."
+    },
+    {
+      "id": "httpx-16",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where are HTTP status codes and their reason phrases defined?",
+      "expected_files": [
+        "httpx/_status_codes.py"
+      ],
+      "reference": "The codes IntEnum in httpx/_status_codes.py defines the status codes with reason phrases; codes.get_reason_phrase returns the phrase for a code."
+    },
+    {
+      "id": "httpx-17",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How can tests return canned responses from a handler function instead of a real server?",
+      "expected_files": [
+        "httpx/_transports/mock.py"
+      ],
+      "reference": "MockTransport in httpx/_transports/mock.py passes each request to a user-supplied handler function and returns its Response, for sync and async clients."
+    },
+    {
+      "id": "httpx-18",
+      "category": "call_chain",
+      "split": "test",
+      "query": "Where are cookies from each response stored into the client's cookie jar?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "Client._send_single_request (and the async version) in httpx/_client.py calls self.cookies.extract_cookies(response) after the transport returns; Cookies.extract_cookies in httpx/_models.py does the jar work."
+    },
+    {
+      "id": "httpx-19",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What drives the authentication flow generators, such as DigestAuth.auth_flow, when a request is sent?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "Client._send_handling_auth in httpx/_client.py calls auth.sync_auth_flow(request) (async_auth_flow in AsyncClient), which runs the Auth.auth_flow generator and sends each yielded request until the flow finishes."
+    },
+    {
+      "id": "httpx-20",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Which public functions end up in Client.request without the user creating a client?",
+      "expected_files": [
+        "httpx/_api.py"
+      ],
+      "reference": "The module-level functions in httpx/_api.py (request, get, post, put, patch, delete, head, options, stream) open a temporary Client in a with block and call client.request (or client.stream)."
+    },
+    {
+      "id": "httpx-21",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What calls the transport's handle_request for every outgoing request?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "Client._send_single_request in httpx/_client.py picks the transport with _transport_for_url and calls transport.handle_request(request); AsyncClient awaits handle_async_request."
+    },
+    {
+      "id": "httpx-22",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Where is create_ssl_context called when the default transport is set up?",
+      "expected_files": [
+        "httpx/_transports/default.py"
+      ],
+      "reference": "HTTPTransport.__init__ and AsyncHTTPTransport.__init__ in httpx/_transports/default.py call create_ssl_context(verify=..., cert=..., trust_env=...) before building the httpcore connection pool."
+    },
+    {
+      "id": "httpx-23",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Where does the client read proxies from the environment when it is created?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "BaseClient._get_proxy_map in httpx/_client.py calls get_environment_proxies() when trust_env is enabled and no proxy was passed explicitly."
+    },
+    {
+      "id": "httpx-24",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What calls the request body encoders for content, form data, files and JSON?",
+      "expected_files": [
+        "httpx/_models.py"
+      ],
+      "reference": "Request.__init__ in httpx/_models.py calls encode_request(content, data, files, json) from httpx/_content.py to build the stream and headers; Response.__init__ uses encode_response."
+    },
+    {
+      "id": "httpx-25",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What feeds raw response chunks through the content decoders?",
+      "expected_files": [
+        "httpx/_models.py"
+      ],
+      "reference": "Response.iter_bytes in httpx/_models.py gets a decoder from Response._get_content_decoder (built from the Content-Encoding header) and passes the chunks from iter_raw through it."
+    },
+    {
+      "id": "httpx-26",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What uses the multipart stream when a request includes files?",
+      "expected_files": [
+        "httpx/_content.py"
+      ],
+      "reference": "encode_multipart_data in httpx/_content.py creates MultipartStream(data=data, files=files, boundary=boundary) when files are passed; encode_request calls it."
+    },
+    {
+      "id": "httpx-27",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What calls the URL parser when a URL object is created?",
+      "expected_files": [
+        "httpx/_urls.py"
+      ],
+      "reference": "URL.__init__ in httpx/_urls.py calls urlparse(url, **kwargs) from httpx/_urlparse.py for string URLs."
+    },
+    {
+      "id": "httpx-28",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What picks the decoder class for each Content-Encoding value of a response?",
+      "expected_files": [
+        "httpx/_models.py"
+      ],
+      "reference": "Response._get_content_decoder in httpx/_models.py looks each Content-Encoding value up in SUPPORTED_DECODERS (defined in httpx/_decoders.py) and combines several with MultiDecoder."
+    },
+    {
+      "id": "httpx-29",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What calls the redirect request builder when a response is a redirect?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "Client._send_handling_redirects in httpx/_client.py calls self._build_redirect_request(request, response) for each redirect, up to max_redirects."
+    },
+    {
+      "id": "httpx-30",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Where is a relative URL joined onto the client's base_url?",
+      "expected_files": [
+        "httpx/_client.py"
+      ],
+      "reference": "BaseClient.build_request in httpx/_client.py calls self._merge_url(url), which joins a relative URL onto base_url."
+    }
+  ]
+}

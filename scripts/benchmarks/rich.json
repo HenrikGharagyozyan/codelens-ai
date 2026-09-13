@@ -1,0 +1,307 @@
+{
+  "repo": "rich",
+  "questions": [
+    {
+      "id": "rich-01",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How is console markup like [bold red] parsed into styled text?",
+      "expected_files": [
+        "rich/markup.py"
+      ],
+      "reference": "rich/markup.py: render() parses markup tags with the RE_TAGS regex (via _parse) and builds a Text with styled spans; escape() escapes brackets."
+    },
+    {
+      "id": "rich-02",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is a style string such as 'bold red on white' parsed?",
+      "expected_files": [
+        "rich/style.py"
+      ],
+      "reference": "Style.parse in rich/style.py parses a style definition into a Style: attribute words, a foreground color, and a background color after 'on'."
+    },
+    {
+      "id": "rich-03",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are colors downgraded for terminals that support only 256 or 16 colors?",
+      "expected_files": [
+        "rich/color.py"
+      ],
+      "reference": "Color.downgrade in rich/color.py converts a color to a ColorSystem: truecolor to the nearest EIGHT_BIT (256) or STANDARD (16) palette color."
+    },
+    {
+      "id": "rich-04",
+      "category": "lookup",
+      "split": "test",
+      "query": "How does Text wrap long lines to a given width?",
+      "expected_files": [
+        "rich/text.py"
+      ],
+      "reference": "Text.wrap in rich/text.py splits the text into lines, gets break offsets from divide_line in rich/_wrap.py, divides the text at them and applies justify and overflow."
+    },
+    {
+      "id": "rich-05",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where is the width of a string in terminal cells computed, including wide characters?",
+      "expected_files": [
+        "rich/cells.py"
+      ],
+      "reference": "cell_len in rich/cells.py returns the cell width of a string, with a fast path for single-cell text and get_character_cell_size for wide characters."
+    },
+    {
+      "id": "rich-06",
+      "category": "lookup",
+      "split": "test",
+      "query": "How are table column widths calculated to fit the console?",
+      "expected_files": [
+        "rich/table.py"
+      ],
+      "reference": "Table._calculate_column_widths in rich/table.py measures each column with _measure_column, then expands or collapses widths (ratios, min/max) to fit the available width."
+    },
+    {
+      "id": "rich-07",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How is the speed of a progress task estimated?",
+      "expected_files": [
+        "rich/progress.py"
+      ],
+      "reference": "Task.speed in rich/progress.py divides the completed amount in the recent ProgressSample entries (_progress) by the time they span; Task.time_remaining uses that speed."
+    },
+    {
+      "id": "rich-08",
+      "category": "lookup",
+      "split": "test",
+      "query": "How does Live refresh the display in the background?",
+      "expected_files": [
+        "rich/live.py"
+      ],
+      "reference": "_RefreshThread in rich/live.py is a thread started by Live.start that calls refresh() refresh_per_second times per second until stopped."
+    },
+    {
+      "id": "rich-09",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where is source code highlighted with Pygments?",
+      "expected_files": [
+        "rich/syntax.py"
+      ],
+      "reference": "Syntax.highlight in rich/syntax.py runs the Pygments lexer and turns the tokens into a styled Text using the SyntaxTheme."
+    },
+    {
+      "id": "rich-10",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How is a traceback extracted from an exception, including local variables?",
+      "expected_files": [
+        "rich/traceback.py"
+      ],
+      "reference": "Traceback.extract in rich/traceback.py walks the exception and its chained causes into Stack and Frame objects, capturing locals when show_locals is set."
+    },
+    {
+      "id": "rich-11",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How does pretty printing decide to split a container over several lines?",
+      "expected_files": [
+        "rich/pretty.py"
+      ],
+      "reference": "rich/pretty.py builds a Node tree with traverse(); the lines are expanded with _Line.expand when check_length says they do not fit max_width, or when expand_all is set."
+    },
+    {
+      "id": "rich-12",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where are log records rendered by Rich's logging handler?",
+      "expected_files": [
+        "rich/logging.py"
+      ],
+      "reference": "RichHandler.emit in rich/logging.py formats the record, builds a Traceback when exc_info is present, and calls RichHandler.render to lay out time, level, message and path."
+    },
+    {
+      "id": "rich-13",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How is console output exported as an SVG image?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console.export_svg in rich/console.py renders the recorded output as an SVG of a terminal window; Console.save_svg writes it to a file."
+    },
+    {
+      "id": "rich-14",
+      "category": "lookup",
+      "split": "test",
+      "query": "Where does a prompt check the user's answer against a list of choices?",
+      "expected_files": [
+        "rich/prompt.py"
+      ],
+      "reference": "PromptBase.check_choice in rich/prompt.py compares the answer with choices (optionally case-insensitive); process_response raises InvalidResponse when it is not one of them."
+    },
+    {
+      "id": "rich-15",
+      "category": "lookup",
+      "split": "dev",
+      "query": "How are Markdown documents rendered in the terminal?",
+      "expected_files": [
+        "rich/markdown.py"
+      ],
+      "reference": "The Markdown class in rich/markdown.py parses with markdown-it (MarkdownIt) and renders the tokens through MarkdownElement subclasses such as Heading, CodeBlock, ListElement and TableElement."
+    },
+    {
+      "id": "rich-16",
+      "category": "lookup",
+      "split": "dev",
+      "query": "Where are the characters for panel and table borders defined?",
+      "expected_files": [
+        "rich/box.py"
+      ],
+      "reference": "rich/box.py defines the Box class and box styles such as ROUNDED, HEAVY and ASCII."
+    },
+    {
+      "id": "rich-17",
+      "category": "lookup",
+      "split": "test",
+      "query": "How is a tree with guide lines rendered?",
+      "expected_files": [
+        "rich/tree.py"
+      ],
+      "reference": "The Tree class in rich/tree.py renders nested labels with the guide characters in TREE_GUIDES, styled by guide_style."
+    },
+    {
+      "id": "rich-18",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What calls the markup parser when a string with markup is printed?",
+      "expected_files": [
+        "rich/console.py",
+        "rich/text.py"
+      ],
+      "reference": "Console.render_str in rich/console.py calls render_markup (rich.markup.render) when markup is enabled; Text.from_markup in rich/text.py also calls it."
+    },
+    {
+      "id": "rich-19",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What cuts rendered segments into lines of the console width?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console.render_lines in rich/console.py calls Segment.split_and_crop_lines (defined in rich/segment.py); Console.print and the export code call it too."
+    },
+    {
+      "id": "rich-20",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Who calls divide_line to find where lines should break?",
+      "expected_files": [
+        "rich/text.py"
+      ],
+      "reference": "Text.wrap in rich/text.py calls divide_line(str(line), width, fold=...) from rich/_wrap.py."
+    },
+    {
+      "id": "rich-21",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What builds a Traceback from an uncaught or logged exception?",
+      "expected_files": [
+        "rich/traceback.py",
+        "rich/logging.py"
+      ],
+      "reference": "The excepthook installed by rich.traceback.install in rich/traceback.py and RichHandler.emit in rich/logging.py call Traceback.from_exception."
+    },
+    {
+      "id": "rich-22",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What applies color downgrading when a style is turned into ANSI codes?",
+      "expected_files": [
+        "rich/style.py"
+      ],
+      "reference": "Style._make_ansi_codes in rich/style.py calls downgrade(color_system) on the foreground and background colors before getting their ANSI codes."
+    },
+    {
+      "id": "rich-23",
+      "category": "call_chain",
+      "split": "test",
+      "query": "Which console method creates the spinner used for status messages?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console.status in rich/console.py creates and returns a Status renderable (rich/status.py) with a spinner."
+    },
+    {
+      "id": "rich-24",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What measures the cells of a table column?",
+      "expected_files": [
+        "rich/table.py"
+      ],
+      "reference": "Table._measure_column in rich/table.py uses Measurement.get to find each cell's minimum and maximum width."
+    },
+    {
+      "id": "rich-25",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What wraps plain Python objects so they are pretty-printed by console.print?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console._collect_renderables in rich/console.py wraps objects that are neither strings nor renderables in Pretty(...)."
+    },
+    {
+      "id": "rich-26",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What draws a panel's border using the box characters?",
+      "expected_files": [
+        "rich/panel.py"
+      ],
+      "reference": "Panel.__rich_console__ in rich/panel.py draws the border with the Box from rich/box.py: get_top, get_bottom and the mid_left/mid_right characters."
+    },
+    {
+      "id": "rich-27",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "Which progress column creates the ProgressBar renderable?",
+      "expected_files": [
+        "rich/progress.py"
+      ],
+      "reference": "BarColumn.render in rich/progress.py returns a ProgressBar (rich/progress_bar.py) built from the task's total and completed values."
+    },
+    {
+      "id": "rich-28",
+      "category": "call_chain",
+      "split": "test",
+      "query": "What falls back to parsing a style definition when a name is not in the theme?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console.get_style in rich/console.py looks the name up in the theme and otherwise calls Style.parse(name)."
+    },
+    {
+      "id": "rich-29",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What creates the Live display that a Progress renders into?",
+      "expected_files": [
+        "rich/progress.py"
+      ],
+      "reference": "Progress.__init__ in rich/progress.py creates self.live = Live(...) with its refresh settings; Progress.start starts it."
+    },
+    {
+      "id": "rich-30",
+      "category": "call_chain",
+      "split": "dev",
+      "query": "What runs the highlighter over text rendered from a plain string?",
+      "expected_files": [
+        "rich/console.py"
+      ],
+      "reference": "Console.render_str in rich/console.py applies the console's highlighter (ReprHighlighter by default) to the resulting Text when highlighting is enabled."
+    }
+  ]
+}

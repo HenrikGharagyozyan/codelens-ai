@@ -1,0 +1,1182 @@
+{
+ "meta": {
+  "date": "2026-09-13",
+  "repos": {
+   "flask": "3.1.3",
+   "httpx": "0.28.1",
+   "rich": "v15.0.0"
+  }
+ },
+ "records": [
+  {
+   "id": "flask-01",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is the WSGI entry point that pushes a request context and dispatches the request?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-02",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How does Flask turn a view's return value into a response object?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-03",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where are before_request functions run before the view?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-04",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are session cookies signed?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-05",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "How is configuration loaded from a Python file, prefixed environment variables or an object?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-06",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How does the flask command find the application to load?",
+   "retrieval": {
+    "vector": 11,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-07",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is the development server started by `flask run`?",
+   "retrieval": {
+    "vector": 6,
+    "keyword": 2,
+    "hybrid": 4,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-08",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are templates found across the application and all its blueprints?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-09",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where are flashed messages stored and read back?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-10",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How does a class-based view route a request to a method named get or post?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-11",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where is a blueprint's deferred setup recorded and later applied?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-12",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are dates, UUIDs and dataclasses serialised to JSON?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-13",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How can a test modify the session before making a request?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 7,
+    "hybrid": 3,
+    "hybrid+graph": 3
+   }
+  },
+  {
+   "id": "flask-14",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where is the application context pushed and popped?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-15",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "test",
+   "query": "How is the error handler for an exception class or HTTP code looked up?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 4,
+    "hybrid": 3,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-16",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is the command that lists all URL rules implemented?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 1,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-17",
+   "repo": "flask",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How can URLs be built outside of a request?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-18",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What opens the session when a request starts?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-19",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What saves the session cookie onto the response after the view has run?",
+   "retrieval": {
+    "vector": null,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-20",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Which function simply delegates to the app's JSON provider to build a JSON response?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 3,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-21",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What calls a blueprint's register method?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "flask-22",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What calls the application's teardown_appcontext functions?",
+   "retrieval": {
+    "vector": 4,
+    "keyword": 6,
+    "hybrid": 5,
+    "hybrid+graph": 4
+   }
+  },
+  {
+   "id": "flask-23",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "test",
+   "query": "Which code serves static files through send_from_directory?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 3,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-24",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What invokes the error handler lookup when a view raises an exception?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-25",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What matches the incoming request URL against the URL map?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-26",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What serialises tagged JSON values for the session cookie?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 3,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-27",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What pushes an application context when a request context is pushed without one?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-28",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What applies the url_defaults functions when a URL is built?",
+   "retrieval": {
+    "vector": 5,
+    "keyword": null,
+    "hybrid": 5,
+    "hybrid+graph": 4
+   }
+  },
+  {
+   "id": "flask-29",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What registers the route that serves static files through send_static_file?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "flask-30",
+   "repo": "flask",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What turns a view's return value into a response after dispatch?",
+   "retrieval": {
+    "vector": 5,
+    "keyword": 1,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-01",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where is a Digest authentication challenge parsed from the WWW-Authenticate header?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-02",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How are credentials read from the user's .netrc file?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-03",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where is the SSL context for certificate verification created?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-04",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where are the connect, read, write and pool timeouts defined?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-05",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How are proxy settings picked up from environment variables like HTTP_PROXY and NO_PROXY?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-06",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How does the client decide which HTTP method to use after a redirect?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 4,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-07",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is the Authorization header removed when a redirect goes to another site?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 4,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-08",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are gzip, deflate, brotli and zstd response bodies decoded?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-09",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is a multipart/form-data body with file uploads built?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 4,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-10",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where does a response raise an error for 4xx and 5xx status codes?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-11",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How is a URL string parsed and normalised, including internationalised host names?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 2,
+    "hybrid+graph": 3
+   }
+  },
+  {
+   "id": "httpx-12",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where does the httpx command-line tool print response headers and the body?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-13",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How are httpcore exceptions translated into httpx exceptions?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-14",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How can requests be sent directly to a WSGI application without a network?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-15",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How are mount and proxy URL patterns matched against a request URL?",
+   "retrieval": {
+    "vector": 5,
+    "keyword": 1,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-16",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where are HTTP status codes and their reason phrases defined?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 4,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-17",
+   "repo": "httpx",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How can tests return canned responses from a handler function instead of a real server?",
+   "retrieval": {
+    "vector": 8,
+    "keyword": 1,
+    "hybrid": 2,
+    "hybrid+graph": 3
+   }
+  },
+  {
+   "id": "httpx-18",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "test",
+   "query": "Where are cookies from each response stored into the client's cookie jar?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 5,
+    "hybrid": 2,
+    "hybrid+graph": 3
+   }
+  },
+  {
+   "id": "httpx-19",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What drives the authentication flow generators, such as DigestAuth.auth_flow, when a request is sent?",
+   "retrieval": {
+    "vector": 4,
+    "keyword": null,
+    "hybrid": null,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-20",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Which public functions end up in Client.request without the user creating a client?",
+   "retrieval": {
+    "vector": null,
+    "keyword": null,
+    "hybrid": null,
+    "hybrid+graph": null
+   }
+  },
+  {
+   "id": "httpx-21",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What calls the transport's handle_request for every outgoing request?",
+   "retrieval": {
+    "vector": 5,
+    "keyword": 5,
+    "hybrid": 6,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-22",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Where is create_ssl_context called when the default transport is set up?",
+   "retrieval": {
+    "vector": 6,
+    "keyword": 4,
+    "hybrid": null,
+    "hybrid+graph": 3
+   }
+  },
+  {
+   "id": "httpx-23",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Where does the client read proxies from the environment when it is created?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 5,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-24",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What calls the request body encoders for content, form data, files and JSON?",
+   "retrieval": {
+    "vector": 9,
+    "keyword": null,
+    "hybrid": null,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "httpx-25",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What feeds raw response chunks through the content decoders?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-26",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What uses the multipart stream when a request includes files?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": null,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-27",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What calls the URL parser when a URL object is created?",
+   "retrieval": {
+    "vector": 3,
+    "keyword": 7,
+    "hybrid": 5,
+    "hybrid+graph": 5
+   }
+  },
+  {
+   "id": "httpx-28",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What picks the decoder class for each Content-Encoding value of a response?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-29",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What calls the redirect request builder when a response is a redirect?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 3,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "httpx-30",
+   "repo": "httpx",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Where is a relative URL joined onto the client's base_url?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-01",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How is console markup like [bold red] parsed into styled text?",
+   "retrieval": {
+    "vector": null,
+    "keyword": 7,
+    "hybrid": 7,
+    "hybrid+graph": 8
+   }
+  },
+  {
+   "id": "rich-02",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is a style string such as 'bold red on white' parsed?",
+   "retrieval": {
+    "vector": 14,
+    "keyword": null,
+    "hybrid": null,
+    "hybrid+graph": 11
+   }
+  },
+  {
+   "id": "rich-03",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are colors downgraded for terminals that support only 256 or 16 colors?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 3,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-04",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "How does Text wrap long lines to a given width?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-05",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where is the width of a string in terminal cells computed, including wide characters?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-06",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "How are table column widths calculated to fit the console?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-07",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How is the speed of a progress task estimated?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-08",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "How does Live refresh the display in the background?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-09",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where is source code highlighted with Pygments?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-10",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How is a traceback extracted from an exception, including local variables?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-11",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How does pretty printing decide to split a container over several lines?",
+   "retrieval": {
+    "vector": 4,
+    "keyword": 2,
+    "hybrid": 3,
+    "hybrid+graph": 5
+   }
+  },
+  {
+   "id": "rich-12",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where are log records rendered by Rich's logging handler?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-13",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How is console output exported as an SVG image?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-14",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "Where does a prompt check the user's answer against a list of choices?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-15",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "How are Markdown documents rendered in the terminal?",
+   "retrieval": {
+    "vector": 5,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-16",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "dev",
+   "query": "Where are the characters for panel and table borders defined?",
+   "retrieval": {
+    "vector": null,
+    "keyword": 6,
+    "hybrid": 12,
+    "hybrid+graph": 13
+   }
+  },
+  {
+   "id": "rich-17",
+   "repo": "rich",
+   "category": "lookup",
+   "split": "test",
+   "query": "How is a tree with guide lines rendered?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-18",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What calls the markup parser when a string with markup is printed?",
+   "retrieval": {
+    "vector": 4,
+    "keyword": 5,
+    "hybrid": 6,
+    "hybrid+graph": 6
+   }
+  },
+  {
+   "id": "rich-19",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What cuts rendered segments into lines of the console width?",
+   "retrieval": {
+    "vector": 10,
+    "keyword": 7,
+    "hybrid": null,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-20",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Who calls divide_line to find where lines should break?",
+   "retrieval": {
+    "vector": 7,
+    "keyword": 3,
+    "hybrid": 3,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-21",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What builds a Traceback from an uncaught or logged exception?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-22",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What applies color downgrading when a style is turned into ANSI codes?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-23",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "test",
+   "query": "Which console method creates the spinner used for status messages?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-24",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What measures the cells of a table column?",
+   "retrieval": {
+    "vector": 4,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-25",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What wraps plain Python objects so they are pretty-printed by console.print?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 2,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-26",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What draws a panel's border using the box characters?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-27",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "Which progress column creates the ProgressBar renderable?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 3,
+    "hybrid": 1,
+    "hybrid+graph": 1
+   }
+  },
+  {
+   "id": "rich-28",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "test",
+   "query": "What falls back to parsing a style definition when a name is not in the theme?",
+   "retrieval": {
+    "vector": 1,
+    "keyword": 1,
+    "hybrid": 1,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-29",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What creates the Live display that a Progress renders into?",
+   "retrieval": {
+    "vector": 2,
+    "keyword": 5,
+    "hybrid": 2,
+    "hybrid+graph": 2
+   }
+  },
+  {
+   "id": "rich-30",
+   "repo": "rich",
+   "category": "call_chain",
+   "split": "dev",
+   "query": "What runs the highlighter over text rendered from a plain string?",
+   "retrieval": {
+    "vector": 8,
+    "keyword": 5,
+    "hybrid": 6,
+    "hybrid+graph": 6
+   }
+  }
+ ]
+}
